@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Great Blue Shark</title>
+<link rel="icon" type="image/png" href="favicon.png">
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -430,8 +431,11 @@
   <div class="comments-section" style="padding:20px;">
     <h3 style="font-size:14px;font-weight:600;color:#aaa;margin-bottom:16px;">Bình luận</h3>
     <div id="commentsList" style="margin-bottom:16px;"></div>
+    <div id="replyIndicator" style="display:none;padding:8px 12px;background:#1a1a2a;border-left:3px solid #1d9bf0;border-radius:0 4px 4px 0;margin-bottom:8px;font-size:12px;color:#1d9bf0;">
+      Đang trả lời <span id="replyToName"></span> <span onclick="cancelReply()" style="margin-left:8px;cursor:pointer;color:#555;">✕</span>
+    </div>
     <div class="comment-form">
-      <input type="text" id="commentName" placeholder="Tên (hoặc để trống = Ẩn danh)" 
+      <input type="text" id="commentName" placeholder="Tên của bạn" 
         style="width:100%;padding:10px 12px;background:#1a1a1a;border:1px solid #252525;border-radius:4px;color:#e0e0e0;font-family:inherit;font-size:13px;margin-bottom:8px;outline:none;">
       <textarea id="commentText" placeholder="Viết bình luận..." rows="3"
         style="width:100%;padding:10px 12px;background:#1a1a1a;border:1px solid #252525;border-radius:4px;color:#e0e0e0;font-family:inherit;font-size:13px;resize:vertical;outline:none;"></textarea>
@@ -522,8 +526,10 @@
   window.currentChapterForComments = 1;
 
   window.postComment = async function() {
-    const name = document.getElementById('commentName').value.trim() || 'Ẩn danh';
+    const name = document.getElementById('commentName').value.trim();
     const text = document.getElementById('commentText').value.trim();
+    if (!name) { document.getElementById('commentName').style.borderColor = '#f04040'; return; }
+    document.getElementById('commentName').style.borderColor = '#252525';
     if (!text) return;
     try {
       await addDoc(collection(db, 'comments'), {
@@ -561,12 +567,27 @@
       });
       comments.forEach((d) => {
         const time = d.timestamp ? new Date(d.timestamp.seconds * 1000).toLocaleDateString('vi-VN') : '';
+        const safeName = d.name.replace(/'/g, "\\'");
         const div = document.createElement('div');
         div.style.cssText = 'padding:12px;background:#161616;border-radius:4px;margin-bottom:8px;position:relative;';
-        div.innerHTML = '<div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:12px;font-weight:600;color:#1d9bf0;">' + d.name + '</span><div style="display:flex;align-items:center;gap:8px;"><span style="font-size:11px;color:#444;">' + time + '</span><span onclick="deleteComment(\'' + d.id + '\')" style="font-size:11px;color:#333;cursor:pointer;">✕</span></div></div><p style="font-size:13px;color:#bbb;line-height:1.6;margin:0;">' + d.text.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</p>';
+        div.innerHTML = '<div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:12px;font-weight:600;color:#1d9bf0;">' + d.name + '</span><div style="display:flex;align-items:center;gap:8px;"><span style="font-size:11px;color:#444;">' + time + '</span><span onclick="deleteComment(\'' + d.id + '\')" style="font-size:11px;color:#333;cursor:pointer;">✕</span></div></div><p style="font-size:13px;color:#bbb;line-height:1.6;margin:0;">' + d.text.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</p><div style="margin-top:6px;"><span onclick="replyTo(\'' + safeName + '\')" style="font-size:11px;color:#555;cursor:pointer;">↩ Trả lời</span></div>';
         list.appendChild(div);
       });
     });
+  }
+
+  window.replyTo = function(name) {
+    document.getElementById('replyIndicator').style.display = 'block';
+    document.getElementById('replyToName').textContent = name;
+    const textarea = document.getElementById('commentText');
+    textarea.value = '@' + name + ' ';
+    textarea.focus();
+  }
+
+  window.cancelReply = function() {
+    document.getElementById('replyIndicator').style.display = 'none';
+    const textarea = document.getElementById('commentText');
+    textarea.value = textarea.value.replace(/@[^\s]+\s?/, '');
   }
 
   window.deleteComment = async function(commentId) {
@@ -584,11 +605,11 @@
 <script>
   // ── DATA ──
   const chapters = [
-    { id: 1, title: "GBS#001", date: "21/02/2026", views: "—", color: "t1" },
-    { id: 2, title: "GBS#002", date: "21/02/2026", views: "—", color: "t2" },
-    { id: 3, title: "GBS#003", date: "21/02/2026", views: "—", color: "t3" },
-    { id: 4, title: "GBS#004", date: "21/02/2026", views: "—", color: "t4" },
-    { id: 5, title: "GBS#005", date: "21/02/2026", views: "—", color: "t5" },
+    { id: 1, title: "GBS#001", date: "21/02/2026" },
+    { id: 2, title: "GBS#002", date: "21/02/2026" },
+    { id: 3, title: "GBS#003", date: "21/02/2026" },
+    { id: 4, title: "GBS#004", date: "21/02/2026" },
+    { id: 5, title: "GBS#005", date: "21/02/2026" },
   ];
 
   let sortAsc = true;
@@ -660,7 +681,6 @@
     updateReaderNav();
     window.scrollTo(0, 0);
     if (window.loadComments) window.loadComments(id);
-    
     if (window.loadLikes) window.loadLikes(id);
   }
 
