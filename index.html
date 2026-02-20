@@ -4,8 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Great Blue Shark</title>
+<meta property="og:title" content="Great Blue Shark">
+<meta property="og:image" content="https://ditmeplaystore.github.io/great-blue-shark/shark.png">
+<meta property="og:url" content="https://ditmeplaystore.github.io/great-blue-shark/">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Great Blue Shark">
+<meta name="twitter:image" content="https://ditmeplaystore.github.io/great-blue-shark/shark.png">
 <link rel="icon" type="image/png" href="favicon.png">
-<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Lilita+One&display=swap" rel="stylesheet">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -48,15 +55,16 @@
   .bubble {
     position: absolute;
     border-radius: 50%;
-    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.15), rgba(29,155,240,0.05));
-    border: 1px solid rgba(255,255,255,0.08);
+    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.3), rgba(29,155,240,0.1));
+    border: 1px solid rgba(255,255,255,0.15);
     animation: bubbleUp linear infinite;
     pointer-events: none;
+    z-index: 1;
   }
 
   @keyframes bubbleUp {
-    0% { transform: translateY(0) scale(1); opacity: 0.6; }
-    50% { opacity: 0.3; }
+    0% { transform: translateY(0) scale(1); opacity: 0.8; }
+    50% { opacity: 0.5; }
     100% { transform: translateY(-300px) scale(0.3); opacity: 0; }
   }
 
@@ -74,11 +82,11 @@
   }
 
   .series-info h1 {
-    font-family: 'Silkscreen', sans-serif;
+    font-family: 'Lilita One', sans-serif;
     font-size: 24px;
-    font-weight: 700;
+    font-weight: 400;
     margin-bottom: 10px;
-    letter-spacing: 2px;
+    letter-spacing: 1px;
   }
 
   .genre-tags {
@@ -385,7 +393,7 @@
   <div class="hero-banner" id="heroBanner">
     <img src="shark.png" alt="Great Blue Shark">
     <div class="hero-title">
-      <h1 style="font-family:'Silkscreen',sans-serif;font-size:32px;font-weight:700;letter-spacing:2px;margin:0;">Great Blue Shark</h1>
+      <h1 style="font-family:'Lilita One',sans-serif;font-size:32px;font-weight:400;letter-spacing:1px;margin:0;">Great Blue Shark</h1>
     </div>
   </div>
 
@@ -641,11 +649,11 @@
 <script>
   // ── DATA ──
   const chapters = [
-    { id: 1, title: "GBS#001", date: "21/02/2026" },
-    { id: 2, title: "GBS#002", date: "21/02/2026" },
-    { id: 3, title: "GBS#003", date: "21/02/2026" },
-    { id: 4, title: "GBS#004", date: "21/02/2026" },
-    { id: 5, title: "GBS#005", date: "21/02/2026" },
+    { id: 1, title: "GBS#001" },
+    { id: 2, title: "GBS#002" },
+    { id: 3, title: "GBS#003" },
+    { id: 4, title: "GBS#004" },
+    { id: 5, title: "GBS#005" },
   ];
 
   let sortAsc = true;
@@ -684,7 +692,6 @@
             GBS#${String(ch.id).padStart(3,'0')}
           </div>
           <div class="chap-meta">
-            <span>${ch.date}</span>
             <span id="likes-ch-${ch.id}">♡ 0</span>
           </div>
         </div>
