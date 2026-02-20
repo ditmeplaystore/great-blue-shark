@@ -582,8 +582,7 @@
     window.currentChapterForComments = chapterId;
     const q = query(
       collection(db, 'comments'),
-      where('chapter', '==', chapterId),
-      orderBy('timestamp', 'asc')
+      where('chapter', '==', chapterId)
     );
     onSnapshot(q, (snapshot) => {
       const list = document.getElementById('commentsList');
@@ -593,8 +592,14 @@
         list.innerHTML = '<p style="color:#444;font-size:13px;">Chưa có bình luận nào.</p>';
         return;
       }
-      snapshot.forEach((doc) => {
-        const d = doc.data();
+      const comments = [];
+      snapshot.forEach((doc) => { comments.push(doc.data()); });
+      comments.sort((a, b) => {
+        const ta = a.timestamp ? a.timestamp.seconds : 0;
+        const tb = b.timestamp ? b.timestamp.seconds : 0;
+        return ta - tb;
+      });
+      comments.forEach((d) => {
         const time = d.timestamp ? new Date(d.timestamp.seconds * 1000).toLocaleDateString('vi-VN') : '';
         const div = document.createElement('div');
         div.style.cssText = 'padding:12px;background:#161616;border-radius:4px;margin-bottom:8px;';
