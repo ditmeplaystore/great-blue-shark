@@ -474,12 +474,11 @@
   window.addView = async function(chapterId) {
     try {
       const ref = doc(db, 'views', 'chapter_' + chapterId);
-      const snap = await getDoc(ref);
-      if (snap.exists()) {
-        await setDoc(ref, { count: increment(1) }, { merge: true });
-      } else {
-        await setDoc(ref, { count: 1 });
-      }
+      await runTransaction(db, async (transaction) => {
+        const snap = await transaction.get(ref);
+        const current = snap.exists() ? snap.data().count : 0;
+        transaction.set(ref, { count: current + 1 });
+      });
     } catch(e) {
       console.error('Lỗi đếm view:', e);
     }
