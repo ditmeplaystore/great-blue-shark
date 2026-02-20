@@ -435,7 +435,7 @@
       Đang trả lời <span id="replyToName"></span> <span onclick="cancelReply()" style="margin-left:8px;cursor:pointer;color:#555;">✕</span>
     </div>
     <div class="comment-form">
-      <input type="text" id="commentName" placeholder="Tên của bạn" 
+      <input type="text" id="commentName" placeholder="Tên của bạn" oninput="localStorage.setItem('gbs_name', this.value)" 
         style="width:100%;padding:10px 12px;background:#1a1a1a;border:1px solid #252525;border-radius:4px;color:#e0e0e0;font-family:inherit;font-size:13px;margin-bottom:8px;outline:none;">
       <textarea id="commentText" placeholder="Viết bình luận..." rows="3"
         style="width:100%;padding:10px 12px;background:#1a1a1a;border:1px solid #252525;border-radius:4px;color:#e0e0e0;font-family:inherit;font-size:13px;resize:vertical;outline:none;"></textarea>
@@ -739,6 +739,8 @@
   renderChapters();
   if (window.loadAllLikes) window.loadAllLikes();
   updateContinueReading();
+  const savedName = localStorage.getItem('gbs_name');
+  if (savedName) document.getElementById('commentName').value = savedName;
 
   // Auto-open from shared link
   const urlParams = new URLSearchParams(window.location.search);
