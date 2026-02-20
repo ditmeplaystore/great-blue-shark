@@ -455,7 +455,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
-  import { getFirestore, collection, addDoc, query, where, orderBy, onSnapshot, serverTimestamp, doc, getDoc, setDoc, increment } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
+  import { getFirestore, collection, addDoc, query, where, orderBy, onSnapshot, serverTimestamp, doc, getDoc, setDoc, increment, runTransaction } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyC1mFu5jwgmszDa7bKCaj89BA_dLSerKhw",
@@ -513,29 +513,32 @@
 
   // ── LIKES ──
   window.likedChapters = JSON.parse(localStorage.getItem('gbs_likes') || '{}');
+  window.likeBusy = false;
 
   window.toggleLike = async function() {
+    if (window.likeBusy) return;
+    window.likeBusy = true;
     const id = window.currentChapterForComments;
-    const key = 'chapter_' + id;
-    const ref = doc(db, 'likes', key);
+    const ref = doc(db, 'likes', 'chapter_' + id);
+    const willLike = !window.likedChapters[id];
     try {
-      if (window.likedChapters[id]) {
-        await setDoc(ref, { count: increment(-1) }, { merge: true });
-        delete window.likedChapters[id];
-      } else {
-        const snap = await getDoc(ref);
-        if (snap.exists()) {
-          await setDoc(ref, { count: increment(1) }, { merge: true });
-        } else {
-          await setDoc(ref, { count: 1 });
-        }
+      await runTransaction(db, async (transaction) => {
+        const snap = await transaction.get(ref);
+        const current = snap.exists() ? snap.data().count : 0;
+        const newCount = willLike ? current + 1 : Math.max(0, current - 1);
+        transaction.set(ref, { count: newCount });
+      });
+      if (willLike) {
         window.likedChapters[id] = true;
+      } else {
+        delete window.likedChapters[id];
       }
       localStorage.setItem('gbs_likes', JSON.stringify(window.likedChapters));
       updateLikeButton(id);
     } catch(e) {
       console.error('Lỗi like:', e);
     }
+    window.likeBusy = false;
   }
 
   window.updateLikeButton = function(chapterId) {
