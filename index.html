@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Great Blue Shark</title>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Be Vietnam Pro', sans-serif;
+    background: #0f0f0f;
+    color: #e0e0e0;
+    min-height: 100vh;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+
+  /* ── BANNER ── */
+  .hero-banner {
+    position: relative;
+    width: 100%;
+    height: 300px;
+    overflow: hidden;
+  }
+
+  .hero-banner img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center top;
+    display: block;
+  }
+
+  .hero-banner::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 70%;
+    background: linear-gradient(to top, #0f0f0f 0%, #0f0f0fcc 30%, transparent 100%);
+  }
+
+  .hero-title {
+    position: absolute;
+    bottom: 16px;
+    left: 20px;
+    right: 20px;
+    z-index: 2;
+  }
+
+  .series-info {
+    padding: 12px 20px 16px;
+    border-bottom: 1px solid #1f1f1f;
+  }
+
+  .series-info h1 {
+    font-family: 'Silkscreen', sans-serif;
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    letter-spacing: 2px;
+  }
+
+  .genre-tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .genre-tag {
+    font-size: 11px;
+    padding: 4px 10px;
+    background: #1a1a1a;
+    border: 1px solid #252525;
+    border-radius: 3px;
+    color: #888;
+  }
+
+  .banner-stats {
+    display: flex;
+    gap: 14px;
+    font-size: 12px;
+    color: #777;
+    margin-top: 10px;
+  }
+
+  .banner-stats span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  /* ── TABS ── */
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid #1f1f1f;
+    position: sticky;
+    top: 0;
+    background: #0f0f0f;
+    z-index: 10;
+  }
+
+  .tab {
+    flex: 1;
+    padding: 14px;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 600;
+    color: #555;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    background: none;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+  }
+
+  .tab.active {
+    color: #e0e0e0;
+    border-bottom-color: #1d9bf0;
+  }
+
+  /* ── CHAPTER HEADER ── */
+  .chapter-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+  }
+
+  .chapter-header span {
+    font-size: 14px;
+    font-weight: 600;
+    color: #aaa;
+  }
+
+  .sort-btn {
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    padding: 4px;
+    font-size: 18px;
+  }
+
+  /* ── CHAPTER LIST ── */
+  .chapter-list {
+    list-style: none;
+  }
+
+  .chapter-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 20px;
+    cursor: pointer;
+    transition: background 0.15s;
+    border-bottom: 1px solid #161616;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .chapter-item:hover {
+    background: #161616;
+  }
+
+  .chapter-item.read {
+    opacity: 0.5;
+  }
+
+  .chap-thumb {
+    width: 64px;
+    height: 64px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: #555;
+    overflow: hidden;
+  }
+
+  .chap-thumb-inner {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .chap-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .chap-label {
+    font-size: 11px;
+    color: #555;
+    margin-bottom: 2px;
+  }
+
+  .chap-title {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .chap-meta {
+    font-size: 11px;
+    color: #555;
+    display: flex;
+    gap: 10px;
+  }
+
+  /* ── DETAILS TAB ── */
+  .details-panel {
+    display: none;
+    padding: 24px 20px;
+  }
+
+  .details-panel.active {
+    display: block;
+  }
+
+  .details-panel h3 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #aaa;
+    margin-bottom: 10px;
+  }
+
+  .details-panel p {
+    font-size: 13px;
+    line-height: 1.7;
+    color: #777;
+    margin-bottom: 24px;
+  }
+
+  .genre-tags {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+  }
+
+  .genre-tag {
+    font-size: 11px;
+    padding: 5px 10px;
+    background: #1a1a1a;
+    border: 1px solid #252525;
+    border-radius: 3px;
+    color: #888;
+  }
+
+  .episodes-panel {
+    display: none;
+  }
+  .episodes-panel.active {
+    display: block;
+  }
+
+  /* ── READER VIEW ── */
+  .reader {
+    display: none;
+    min-height: 100vh;
+  }
+
+  .reader.active {
+    display: block;
+  }
+
+  .reader-nav {
+    position: sticky;
+    top: 0;
+    background: #0f0f0f;
+    border-bottom: 1px solid #1f1f1f;
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    gap: 12px;
+    z-index: 10;
+  }
+
+  .back-btn {
+    background: none;
+    border: none;
+    color: #aaa;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 4px;
+  }
+
+  .reader-title {
+    font-size: 14px;
+    font-weight: 600;
+    flex: 1;
+  }
+
+  .reader-content {
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: #0a0a0a;
+    min-height: 60vh;
+  }
+
+  .reader-placeholder {
+    padding: 60px 20px;
+    text-align: center;
+    color: #333;
+    font-size: 13px;
+    line-height: 1.8;
+  }
+
+  .reader-bottom {
+    padding: 20px;
+    display: flex;
+    gap: 10px;
+  }
+
+  .reader-bottom button {
+    flex: 1;
+    padding: 12px;
+    background: #1a1a1a;
+    border: 1px solid #252525;
+    color: #aaa;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .reader-bottom button:hover {
+    background: #222;
+    color: #e0e0e0;
+  }
+
+  .reader-bottom button:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+
+  /* ── MAIN VIEW TOGGLE ── */
+  .main-view {
+    display: block;
+  }
+
+  .main-view.hidden {
+    display: none;
+  }
+
+  /* ── COLOR PALETTE FOR THUMBNAILS ── */
+  .t1 { background: #1a1517; }
+  .t2 { background: #15171a; }
+  .t3 { background: #171a15; }
+  .t4 { background: #1a1815; }
+  .t5 { background: #17151a; }
+</style>
+</head>
+<body>
+
+<!-- ══════ MAIN VIEW ══════ -->
+<div class="main-view" id="mainView">
+
+  <div class="hero-banner">
+    <img src="shark.png" alt="Great Blue Shark">
+    <div class="hero-title">
+      <h1 style="font-family:'Silkscreen',sans-serif;font-size:24px;font-weight:700;letter-spacing:2px;margin:0;">🦈 Great Blue Shark 🦈</h1>
+    </div>
+  </div>
+
+  <div class="series-info">
+    <div class="genre-tags">
+      <span class="genre-tag">Crime</span>
+      <span class="genre-tag">Drama</span>
+      <span class="genre-tag">Mature</span>
+      <span class="genre-tag">LGBT</span>
+      <span class="genre-tag">Dark</span>
+      <span class="genre-tag">Satire</span>
+    </div>
+    <div class="banner-stats">
+      <span id="totalViews">👁 0</span>
+    </div>
+    <div id="continueReading" style="display:none;margin-top:12px;">
+      <button onclick="continueReading()" style="width:100%;padding:12px;background:#1d9bf0;border:none;border-radius:4px;color:#fff;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;">▶ Đọc tiếp GBS#001</button>
+    </div>
+  </div>
+
+  <!-- EPISODES -->
+  <div class="episodes-panel active" id="episodesPanel">
+    <div style="padding:12px 20px 0;">
+      <input type="text" id="searchInput" placeholder="Tìm kiếm... (VD: 003, GBS#001)" oninput="searchChapters()" 
+        style="width:100%;padding:10px 12px;background:#1a1a1a;border:1px solid #252525;border-radius:4px;color:#e0e0e0;font-family:inherit;font-size:13px;outline:none;">
+    </div>
+    <div class="chapter-header">
+      <span id="chapCount">5 episodes</span>
+      <button class="sort-btn" onclick="toggleSort()" title="Đảo thứ tự">⇅</button>
+    </div>
+    <ul class="chapter-list" id="chapterList"></ul>
+  </div>
+
+
+</div>
+
+<!-- ══════ READER VIEW ══════ -->
+<div class="reader" id="readerView">
+  <div class="reader-nav">
+    <button class="back-btn" onclick="closeReader()">←</button>
+    <div class="reader-title" id="readerTitle">GBS#001</div>
+  </div>
+  <div class="reader-content" id="readerContent">
+    <div class="reader-placeholder">
+      Ảnh chapter sẽ hiển thị ở đây.<br>
+      Cuộn xuống để đọc.
+    </div>
+  </div>
+  <div style="padding:12px 20px;display:flex;align-items:center;gap:8px;">
+    <button id="likeBtn" onclick="toggleLike()" style="background:none;border:1px solid #252525;border-radius:20px;padding:8px 16px;color:#888;font-family:inherit;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all 0.15s;">
+      <span id="likeIcon">♡</span> <span id="likeCount">0</span>
+    </button>
+    <button onclick="shareChapter()" style="background:none;border:1px solid #252525;border-radius:20px;padding:8px 16px;color:#888;font-family:inherit;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all 0.15s;">
+      🔗 Chia sẻ
+    </button>
+    <span id="shareMsg" style="font-size:11px;color:#1d9bf0;display:none;">Đã copy!</span>
+  </div>
+  <div class="reader-bottom">
+    <button id="prevBtn" onclick="prevChapter()">← Chap trước</button>
+    <button id="nextBtn" onclick="nextChapter()">Chap sau →</button>
+  </div>
+  <div class="comments-section" style="padding:20px;">
+    <h3 style="font-size:14px;font-weight:600;color:#aaa;margin-bottom:16px;">Bình luận</h3>
+    <div id="commentsList" style="margin-bottom:16px;"></div>
+    <div class="comment-form">
+      <input type="text" id="commentName" placeholder="Tên (hoặc để trống = Ẩn danh)" 
+        style="width:100%;padding:10px 12px;background:#1a1a1a;border:1px solid #252525;border-radius:4px;color:#e0e0e0;font-family:inherit;font-size:13px;margin-bottom:8px;outline:none;">
+      <textarea id="commentText" placeholder="Viết bình luận..." rows="3"
+        style="width:100%;padding:10px 12px;background:#1a1a1a;border:1px solid #252525;border-radius:4px;color:#e0e0e0;font-family:inherit;font-size:13px;resize:vertical;outline:none;"></textarea>
+      <button onclick="postComment()" 
+        style="margin-top:8px;padding:10px 20px;background:#1d9bf0;border:none;border-radius:4px;color:#fff;font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;">Gửi</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
+  import { getFirestore, collection, addDoc, query, where, orderBy, onSnapshot, serverTimestamp, doc, getDoc, setDoc, increment } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyC1mFu5jwgmszDa7bKCaj89BA_dLSerKhw",
+    authDomain: "great-blue-shark.firebaseapp.com",
+    projectId: "great-blue-shark",
+    storageBucket: "great-blue-shark.firebasestorage.app",
+    messagingSenderId: "848130301351",
+    appId: "1:848130301351:web:4c063bcd97a6",
+    measurementId: "G-TTVKGE6G8C"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  // ── VIEW COUNTER ──
+  window.addView = async function(chapterId) {
+    try {
+      const ref = doc(db, 'views', 'chapter_' + chapterId);
+      const snap = await getDoc(ref);
+      if (snap.exists()) {
+        await setDoc(ref, { count: increment(1) }, { merge: true });
+      } else {
+        await setDoc(ref, { count: 1 });
+      }
+    } catch(e) {
+      console.error('Lỗi đếm view:', e);
+    }
+  }
+
+  window.loadAllViews = function() {
+    for (let i = 1; i <= 5; i++) {
+      const ref = doc(db, 'views', 'chapter_' + i);
+      onSnapshot(ref, (snap) => {
+        const count = snap.exists() ? snap.data().count : 0;
+        const el = document.getElementById('views-ch-' + i);
+        if (el) el.textContent = '👁 ' + count;
+        // update total
+        updateTotalViews();
+      });
+    }
+  }
+
+  window.updateTotalViews = function() {
+    let total = 0;
+    for (let i = 1; i <= 5; i++) {
+      const el = document.getElementById('views-ch-' + i);
+      if (el) {
+        const num = parseInt(el.textContent.replace('👁 ', '')) || 0;
+        total += num;
+      }
+    }
+    const totalEl = document.getElementById('totalViews');
+    if (totalEl) totalEl.textContent = '👁 ' + total;
+  }
+
+  // ── LIKES ──
+  window.likedChapters = JSON.parse(localStorage.getItem('gbs_likes') || '{}');
+
+  window.toggleLike = async function() {
+    const id = window.currentChapterForComments;
+    const key = 'chapter_' + id;
+    const ref = doc(db, 'likes', key);
+    try {
+      if (window.likedChapters[id]) {
+        await setDoc(ref, { count: increment(-1) }, { merge: true });
+        delete window.likedChapters[id];
+      } else {
+        const snap = await getDoc(ref);
+        if (snap.exists()) {
+          await setDoc(ref, { count: increment(1) }, { merge: true });
+        } else {
+          await setDoc(ref, { count: 1 });
+        }
+        window.likedChapters[id] = true;
+      }
+      localStorage.setItem('gbs_likes', JSON.stringify(window.likedChapters));
+      updateLikeButton(id);
+    } catch(e) {
+      console.error('Lỗi like:', e);
+    }
+  }
+
+  window.updateLikeButton = function(chapterId) {
+    const liked = window.likedChapters[chapterId];
+    const icon = document.getElementById('likeIcon');
+    const btn = document.getElementById('likeBtn');
+    if (icon) icon.textContent = liked ? '♥' : '♡';
+    if (btn) btn.style.borderColor = liked ? '#1d9bf0' : '#252525';
+    if (btn) btn.style.color = liked ? '#1d9bf0' : '#888';
+  }
+
+  window.loadLikes = function(chapterId) {
+    const ref = doc(db, 'likes', 'chapter_' + chapterId);
+    onSnapshot(ref, (snap) => {
+      const count = snap.exists() ? snap.data().count : 0;
+      const el = document.getElementById('likeCount');
+      if (el) el.textContent = Math.max(0, count);
+    });
+    updateLikeButton(chapterId);
+  }
+
+  window.currentChapterForComments = 1;
+
+  window.postComment = async function() {
+    const name = document.getElementById('commentName').value.trim() || 'Ẩn danh';
+    const text = document.getElementById('commentText').value.trim();
+    if (!text) return;
+    try {
+      await addDoc(collection(db, 'comments'), {
+        chapter: window.currentChapterForComments,
+        name: name,
+        text: text,
+        timestamp: serverTimestamp()
+      });
+      document.getElementById('commentText').value = '';
+    } catch(e) {
+      console.error('Lỗi gửi comment:', e);
+    }
+  }
+
+  window.loadComments = function(chapterId) {
+    window.currentChapterForComments = chapterId;
+    const q = query(
+      collection(db, 'comments'),
+      where('chapter', '==', chapterId),
+      orderBy('timestamp', 'asc')
+    );
+    onSnapshot(q, (snapshot) => {
+      const list = document.getElementById('commentsList');
+      if (!list) return;
+      list.innerHTML = '';
+      if (snapshot.empty) {
+        list.innerHTML = '<p style="color:#444;font-size:13px;">Chưa có bình luận nào.</p>';
+        return;
+      }
+      snapshot.forEach((doc) => {
+        const d = doc.data();
+        const time = d.timestamp ? new Date(d.timestamp.seconds * 1000).toLocaleDateString('vi-VN') : '';
+        const div = document.createElement('div');
+        div.style.cssText = 'padding:12px;background:#161616;border-radius:4px;margin-bottom:8px;';
+        div.innerHTML = '<div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:12px;font-weight:600;color:#1d9bf0;">' + d.name + '</span><span style="font-size:11px;color:#444;">' + time + '</span></div><p style="font-size:13px;color:#bbb;line-height:1.6;margin:0;">' + d.text.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</p>';
+        list.appendChild(div);
+      });
+    });
+  }
+</script>
+
+<script>
+  // ── DATA ──
+  const chapters = [
+    { id: 1, title: "GBS#001", date: "21/02/2026", views: "—", color: "t1" },
+    { id: 2, title: "GBS#002", date: "21/02/2026", views: "—", color: "t2" },
+    { id: 3, title: "GBS#003", date: "21/02/2026", views: "—", color: "t3" },
+    { id: 4, title: "GBS#004", date: "21/02/2026", views: "—", color: "t4" },
+    { id: 5, title: "GBS#005", date: "21/02/2026", views: "—", color: "t5" },
+  ];
+
+  let sortAsc = true;
+  let currentChapter = 0;
+
+  // ── READ HISTORY ──
+  function getReadHistory() {
+    return JSON.parse(localStorage.getItem('gbs_read') || '{}');
+  }
+
+  function markAsRead(id) {
+    const history = getReadHistory();
+    history[id] = true;
+    localStorage.setItem('gbs_read', JSON.stringify(history));
+  }
+
+  // ── RENDER CHAPTERS ──
+  function renderChapters(filter) {
+    const list = document.getElementById('chapterList');
+    const history = getReadHistory();
+    let sorted = sortAsc ? [...chapters] : [...chapters].reverse();
+    if (filter) {
+      const q = filter.toLowerCase();
+      sorted = sorted.filter(ch => ch.title.toLowerCase().includes(q) || String(ch.id).includes(q));
+    }
+    document.getElementById('chapCount').textContent = sorted.length + ' episodes';
+    list.innerHTML = sorted.map(ch => {
+      const isRead = history[ch.id];
+      return `
+      <a class="chapter-item${isRead ? ' read' : ''}" onclick="openReader(${ch.id})">
+        <div class="chap-thumb">
+          <img src="thumb.png" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:4px;">
+        </div>
+        <div class="chap-info">
+          <div class="chap-title">
+            GBS#${String(ch.id).padStart(3,'0')}
+          </div>
+          <div class="chap-meta">
+            <span>${ch.date}</span>
+            <span id="views-ch-${ch.id}">👁 0</span>
+          </div>
+        </div>
+      </a>`;
+    }).join('');
+  }
+
+  // ── SEARCH ──
+  function searchChapters() {
+    const q = document.getElementById('searchInput').value.trim();
+    renderChapters(q || null);
+    if (window.loadAllViews) window.loadAllViews();
+  }
+
+  // ── TABS ──
+  function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach((t, i) => {
+      t.classList.toggle('active', (tab === 'episodes' && i === 0) || (tab === 'details' && i === 1));
+    });
+    document.getElementById('episodesPanel').classList.toggle('active', tab === 'episodes');
+    document.getElementById('detailsPanel').classList.toggle('active', tab === 'details');
+  }
+
+  // ── SORT ──
+  function toggleSort() {
+    sortAsc = !sortAsc;
+    const q = document.getElementById('searchInput').value.trim();
+    renderChapters(q || null);
+    if (window.loadAllViews) window.loadAllViews();
+  }
+
+  // ── READER ──
+  function openReader(id) {
+    currentChapter = id;
+    markAsRead(id);
+    document.getElementById('mainView').classList.add('hidden');
+    document.getElementById('readerView').classList.add('active');
+    document.getElementById('readerTitle').textContent = `GBS#${String(id).padStart(3,'0')}`;
+    updateReaderNav();
+    window.scrollTo(0, 0);
+    if (window.loadComments) window.loadComments(id);
+    if (window.addView) window.addView(id);
+    if (window.loadLikes) window.loadLikes(id);
+  }
+
+  function closeReader() {
+    document.getElementById('mainView').classList.remove('hidden');
+    document.getElementById('readerView').classList.remove('active');
+    renderChapters();
+    if (window.loadAllViews) window.loadAllViews();
+    updateContinueReading();
+  }
+
+  function prevChapter() {
+    if (currentChapter > 1) openReader(currentChapter - 1);
+  }
+
+  function nextChapter() {
+    if (currentChapter < chapters.length) openReader(currentChapter + 1);
+  }
+
+  function updateReaderNav() {
+    document.getElementById('prevBtn').disabled = currentChapter <= 1;
+    document.getElementById('nextBtn').disabled = currentChapter >= chapters.length;
+  }
+
+  function shareChapter() {
+    const url = window.location.origin + window.location.pathname + '?ch=' + currentChapter;
+    navigator.clipboard.writeText(url).then(() => {
+      const msg = document.getElementById('shareMsg');
+      msg.style.display = 'inline';
+      setTimeout(() => { msg.style.display = 'none'; }, 2000);
+    }).catch(() => {
+      prompt('Copy link:', url);
+    });
+  }
+
+  // ── INIT ──
+  renderChapters();
+  if (window.loadAllViews) window.loadAllViews();
+  updateContinueReading();
+
+  // Auto-open from shared link
+  const urlParams = new URLSearchParams(window.location.search);
+  const sharedCh = parseInt(urlParams.get('ch'));
+  if (sharedCh && sharedCh >= 1 && sharedCh <= chapters.length) {
+    openReader(sharedCh);
+  }
+
+  function updateContinueReading() {
+    const history = getReadHistory();
+    const readIds = Object.keys(history).map(Number).sort((a, b) => a - b);
+    const container = document.getElementById('continueReading');
+    if (!container) return;
+
+    if (readIds.length === 0) {
+      // chưa đọc gì → hiện "Bắt đầu đọc"
+      container.style.display = 'block';
+      container.innerHTML = '<button onclick="openReader(1)" style="width:100%;padding:12px;background:#1d9bf0;border:none;border-radius:4px;color:#fff;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;">▶ Bắt đầu đọc</button>';
+    } else {
+      const lastRead = Math.max(...readIds);
+      const nextChapter = lastRead < chapters.length ? lastRead + 1 : lastRead;
+      const isNext = lastRead < chapters.length;
+      const label = isNext ? 'Đọc tiếp GBS#' + String(nextChapter).padStart(3, '0') : 'Đọc lại GBS#' + String(nextChapter).padStart(3, '0');
+      container.style.display = 'block';
+      container.innerHTML = '<button onclick="openReader(' + nextChapter + ')" style="width:100%;padding:12px;background:#1d9bf0;border:none;border-radius:4px;color:#fff;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;">▶ ' + label + '</button>';
+    }
+  }
+</script>
+</body>
+</html>
