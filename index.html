@@ -252,15 +252,6 @@
     margin-bottom: 24px;
   }
 
-  .genre-tag {
-    font-size: 11px;
-    padding: 5px 10px;
-    background: #1a1a1a;
-    border: 1px solid #252525;
-    border-radius: 3px;
-    color: #888;
-  }
-
   .episodes-panel {
     display: none;
   }
@@ -390,9 +381,6 @@
       <span class="genre-tag">Dark</span>
       <span class="genre-tag">Satire</span>
     </div>
-    <div class="banner-stats">
-      <span id="totalViews">👁 0</span>
-    </div>
     <div id="continueReading" style="display:none;margin-top:12px;">
       <button onclick="continueReading()" style="width:100%;padding:12px;background:#1d9bf0;border:none;border-radius:4px;color:#fff;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;">▶ Đọc tiếp GBS#001</button>
     </div>
@@ -455,7 +443,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
-  import { getFirestore, collection, addDoc, query, where, orderBy, onSnapshot, serverTimestamp, doc, getDoc, setDoc, increment, runTransaction } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
+  import { getFirestore, collection, addDoc, query, where, onSnapshot, serverTimestamp, doc, setDoc, runTransaction } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyC1mFu5jwgmszDa7bKCaj89BAECxW-6HEQ",
@@ -470,44 +458,16 @@
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
-  // ── VIEW COUNTER ──
-  window.addView = async function(chapterId) {
-    try {
-      const ref = doc(db, 'views', 'chapter_' + chapterId);
-      await runTransaction(db, async (transaction) => {
-        const snap = await transaction.get(ref);
-        const current = snap.exists() ? snap.data().count : 0;
-        transaction.set(ref, { count: current + 1 });
-      });
-    } catch(e) {
-      console.error('Lỗi đếm view:', e);
-    }
-  }
-
-  window.loadAllViews = function() {
+  // ── LOAD LIKES PER CHAPTER ──
+  window.loadAllLikes = function() {
     for (let i = 1; i <= 5; i++) {
-      const ref = doc(db, 'views', 'chapter_' + i);
+      const ref = doc(db, 'likes', 'chapter_' + i);
       onSnapshot(ref, (snap) => {
-        const count = snap.exists() ? snap.data().count : 0;
-        const el = document.getElementById('views-ch-' + i);
-        if (el) el.textContent = '👁 ' + count;
-        // update total
-        updateTotalViews();
+        const count = snap.exists() ? Math.max(0, snap.data().count) : 0;
+        const el = document.getElementById('likes-ch-' + i);
+        if (el) el.textContent = '♡ ' + count;
       });
     }
-  }
-
-  window.updateTotalViews = function() {
-    let total = 0;
-    for (let i = 1; i <= 5; i++) {
-      const el = document.getElementById('views-ch-' + i);
-      if (el) {
-        const num = parseInt(el.textContent.replace('👁 ', '')) || 0;
-        total += num;
-      }
-    }
-    const totalEl = document.getElementById('totalViews');
-    if (totalEl) totalEl.textContent = '👁 ' + total;
   }
 
   // ── LIKES ──
@@ -593,7 +553,7 @@
         return;
       }
       const comments = [];
-      snapshot.forEach((doc) => { comments.push(doc.data()); });
+      snapshot.forEach((d) => { comments.push({ id: d.id, ...d.data() }); });
       comments.sort((a, b) => {
         const ta = a.timestamp ? a.timestamp.seconds : 0;
         const tb = b.timestamp ? b.timestamp.seconds : 0;
@@ -602,11 +562,22 @@
       comments.forEach((d) => {
         const time = d.timestamp ? new Date(d.timestamp.seconds * 1000).toLocaleDateString('vi-VN') : '';
         const div = document.createElement('div');
-        div.style.cssText = 'padding:12px;background:#161616;border-radius:4px;margin-bottom:8px;';
-        div.innerHTML = '<div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:12px;font-weight:600;color:#1d9bf0;">' + d.name + '</span><span style="font-size:11px;color:#444;">' + time + '</span></div><p style="font-size:13px;color:#bbb;line-height:1.6;margin:0;">' + d.text.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</p>';
+        div.style.cssText = 'padding:12px;background:#161616;border-radius:4px;margin-bottom:8px;position:relative;';
+        div.innerHTML = '<div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:12px;font-weight:600;color:#1d9bf0;">' + d.name + '</span><div style="display:flex;align-items:center;gap:8px;"><span style="font-size:11px;color:#444;">' + time + '</span><span onclick="deleteComment(\'' + d.id + '\')" style="font-size:11px;color:#333;cursor:pointer;">✕</span></div></div><p style="font-size:13px;color:#bbb;line-height:1.6;margin:0;">' + d.text.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</p>';
         list.appendChild(div);
       });
     });
+  }
+
+  window.deleteComment = async function(commentId) {
+    const pw = prompt('Mật khẩu admin:');
+    if (pw !== 'makocain') return;
+    try {
+      const { deleteDoc } = await import("https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js");
+      await deleteDoc(doc(db, 'comments', commentId));
+    } catch(e) {
+      console.error('Lỗi xóa comment:', e);
+    }
   }
 </script>
 
@@ -657,7 +628,7 @@
           </div>
           <div class="chap-meta">
             <span>${ch.date}</span>
-            <span id="views-ch-${ch.id}">👁 0</span>
+            <span id="likes-ch-${ch.id}">♡ 0</span>
           </div>
         </div>
       </a>`;
@@ -668,16 +639,7 @@
   function searchChapters() {
     const q = document.getElementById('searchInput').value.trim();
     renderChapters(q || null);
-    if (window.loadAllViews) window.loadAllViews();
-  }
-
-  // ── TABS ──
-  function switchTab(tab) {
-    document.querySelectorAll('.tab').forEach((t, i) => {
-      t.classList.toggle('active', (tab === 'episodes' && i === 0) || (tab === 'details' && i === 1));
-    });
-    document.getElementById('episodesPanel').classList.toggle('active', tab === 'episodes');
-    document.getElementById('detailsPanel').classList.toggle('active', tab === 'details');
+    if (window.loadAllLikes) window.loadAllLikes();
   }
 
   // ── SORT ──
@@ -685,7 +647,7 @@
     sortAsc = !sortAsc;
     const q = document.getElementById('searchInput').value.trim();
     renderChapters(q || null);
-    if (window.loadAllViews) window.loadAllViews();
+    if (window.loadAllLikes) window.loadAllLikes();
   }
 
   // ── READER ──
@@ -698,7 +660,7 @@
     updateReaderNav();
     window.scrollTo(0, 0);
     if (window.loadComments) window.loadComments(id);
-    if (window.addView) window.addView(id);
+    
     if (window.loadLikes) window.loadLikes(id);
   }
 
@@ -706,7 +668,7 @@
     document.getElementById('mainView').classList.remove('hidden');
     document.getElementById('readerView').classList.remove('active');
     renderChapters();
-    if (window.loadAllViews) window.loadAllViews();
+    if (window.loadAllLikes) window.loadAllLikes();
     updateContinueReading();
   }
 
@@ -734,18 +696,6 @@
     });
   }
 
-  // ── INIT ──
-  renderChapters();
-  if (window.loadAllViews) window.loadAllViews();
-  updateContinueReading();
-
-  // Auto-open from shared link
-  const urlParams = new URLSearchParams(window.location.search);
-  const sharedCh = parseInt(urlParams.get('ch'));
-  if (sharedCh && sharedCh >= 1 && sharedCh <= chapters.length) {
-    openReader(sharedCh);
-  }
-
   function updateContinueReading() {
     const history = getReadHistory();
     const readIds = Object.keys(history).map(Number).sort((a, b) => a - b);
@@ -753,17 +703,28 @@
     if (!container) return;
 
     if (readIds.length === 0) {
-      // chưa đọc gì → hiện "Bắt đầu đọc"
       container.style.display = 'block';
       container.innerHTML = '<button onclick="openReader(1)" style="width:100%;padding:12px;background:#1d9bf0;border:none;border-radius:4px;color:#fff;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;">▶ Bắt đầu đọc</button>';
     } else {
       const lastRead = Math.max(...readIds);
-      const nextChapter = lastRead < chapters.length ? lastRead + 1 : lastRead;
+      const nextCh = lastRead < chapters.length ? lastRead + 1 : lastRead;
       const isNext = lastRead < chapters.length;
-      const label = isNext ? 'Đọc tiếp GBS#' + String(nextChapter).padStart(3, '0') : 'Đọc lại GBS#' + String(nextChapter).padStart(3, '0');
+      const label = isNext ? 'Đọc tiếp GBS#' + String(nextCh).padStart(3, '0') : 'Đọc lại GBS#' + String(nextCh).padStart(3, '0');
       container.style.display = 'block';
-      container.innerHTML = '<button onclick="openReader(' + nextChapter + ')" style="width:100%;padding:12px;background:#1d9bf0;border:none;border-radius:4px;color:#fff;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;">▶ ' + label + '</button>';
+      container.innerHTML = '<button onclick="openReader(' + nextCh + ')" style="width:100%;padding:12px;background:#1d9bf0;border:none;border-radius:4px;color:#fff;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;">▶ ' + label + '</button>';
     }
+  }
+
+  // ── INIT ──
+  renderChapters();
+  if (window.loadAllLikes) window.loadAllLikes();
+  updateContinueReading();
+
+  // Auto-open from shared link
+  const urlParams = new URLSearchParams(window.location.search);
+  const sharedCh = parseInt(urlParams.get('ch'));
+  if (sharedCh && sharedCh >= 1 && sharedCh <= chapters.length) {
+    openReader(sharedCh);
   }
 </script>
 </body>
