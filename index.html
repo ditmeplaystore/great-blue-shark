@@ -546,11 +546,13 @@
 
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
+  window.firebaseDb = db;
   window.firebaseReady = true;
 
   // ── LOAD LIKES PER CHAPTER ──
   window.loadAllLikes = function() {
-    for (let i = 1; i <= 5; i++) {
+    const total = window.chapters ? window.chapters.length : 5;
+    for (let i = 1; i <= total; i++) {
       const ref = doc(db, 'likes', 'chapter_' + i);
       onSnapshot(ref, (snap) => {
         const count = snap.exists() ? Math.max(0, snap.data().count) : 0;
@@ -689,22 +691,49 @@
 </script>
 
 <script>
-  // ── DATA ──
-  const chapters = [
-    { id: 1, title: "GBS#001", images: [
-      "Không Có Tiêu Đề535.png",
-      "Không Có Tiêu Đề536.png",
-      "Không Có Tiêu Đề537.png",
-      "Không Có Tiêu Đề538.png",
-      "Không Có Tiêu Đề548.png",
-      "Không Có Tiêu Đề555_0000-00-53.png",
-      "Không Có Tiêu Đề540.png"
-    ]},
-    { id: 2, title: "GBS#002", images: [] },
-    { id: 3, title: "GBS#003", images: [] },
-    { id: 4, title: "GBS#004", images: [] },
-    { id: 5, title: "GBS#005", images: [] },
-  ];
+  // ── DATA (loaded from Firestore) ──
+  let chapters = [];
+  let chaptersLoaded = false;
+
+  async function loadChaptersFromFirestore() {
+    try {
+      // Wait for Firebase to be ready
+      while (!window.firebaseDb) {
+        await new Promise(r => setTimeout(r, 100));
+      }
+      const { collection, getDocs, query, orderBy } = await import("https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js");
+      const q = query(collection(window.firebaseDb, 'chapters'), orderBy('order', 'asc'));
+      const snapshot = await getDocs(q);
+      chapters = [];
+      let idx = 1;
+      snapshot.forEach((d) => {
+        const data = d.data();
+        chapters.push({
+          id: idx,
+          firestoreId: d.id,
+          title: data.title || ('GBS#' + String(idx).padStart(3, '0')),
+          images: data.images || []
+        });
+        idx++;
+      });
+      chaptersLoaded = true;
+      window.chapters = chapters;
+      renderChapters();
+      updateContinueReading();
+      if (window.loadAllLikes) window.loadAllLikes();
+
+      // Auto-open from shared link
+      const urlParams = new URLSearchParams(window.location.search);
+      const sharedCh = parseInt(urlParams.get('ch'));
+      if (sharedCh && sharedCh >= 1 && sharedCh <= chapters.length) {
+        openReader(sharedCh);
+      }
+    } catch(e) {
+      console.error('Lỗi tải chapters:', e);
+      // Fallback: show message
+      document.getElementById('chapterList').innerHTML = '<li style="padding:20px;text-align:center;color:#555;font-size:13px;">Không tải được danh sách chương.</li>';
+    }
+  }
 
   let sortAsc = true;
   let currentChapter = 0;
@@ -774,7 +803,7 @@
     const ch = chapters.find(c => c.id === id);
     const content = document.getElementById('readerContent');
     if (ch && ch.images && ch.images.length > 0) {
-      content.innerHTML = ch.images.map(img => `<img src="${encodeURI(img)}" alt="" style="width:100%;display:block;">`).join('');
+      content.innerHTML = ch.images.map(img => `<img src="${img}" alt="" style="width:100%;display:block;" loading="lazy">`).join('');
     } else {
       content.innerHTML = '<div class="reader-placeholder">Ảnh chapter sẽ hiển thị ở đây.<br>Cuộn xuống để đọc.</div>';
     }
@@ -838,8 +867,8 @@
   }
 
   // ── INIT ──
-  renderChapters();
-  updateContinueReading();
+  renderChapters(); // render empty first
+  loadChaptersFromFirestore(); // then load from Firestore
 
   function tryLoadFirebase() {
     if (window.loadAllLikes) {
@@ -850,12 +879,7 @@
   }
   tryLoadFirebase();
 
-  // Auto-open from shared link
-  const urlParams = new URLSearchParams(window.location.search);
-  const sharedCh = parseInt(urlParams.get('ch'));
-  if (sharedCh && sharedCh >= 1 && sharedCh <= chapters.length) {
-    openReader(sharedCh);
-  }
+  // Auto-open handled in loadChaptersFromFirestore
 </script>
 </body>
 </html>
