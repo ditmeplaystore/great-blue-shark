@@ -50,6 +50,7 @@
     height: 40%;
     background: linear-gradient(to top, #0f0f0f 0%, #0f0f0fcc 20%, transparent 100%);
     z-index: 1;
+    pointer-events: none;
   }
 
   .bubble {
@@ -423,20 +424,19 @@
 
       // 🦈 EASTER EGG
       let clickCount = 0;
-      let clickTimer = null;
-      banner.addEventListener('click', easterEggClick);
-      banner.addEventListener('touchend', easterEggClick);
-
-      function easterEggClick(e) {
-        e.preventDefault();
+      let lastTap = 0;
+      function easterEggTap() {
+        const now = Date.now();
+        if (now - lastTap > 3000) clickCount = 0;
+        lastTap = now;
         clickCount++;
-        clearTimeout(clickTimer);
-        clickTimer = setTimeout(() => { clickCount = 0; }, 3000);
         if (clickCount >= 10) {
           clickCount = 0;
           sharkRain();
         }
       }
+      banner.addEventListener('touchstart', easterEggTap, {passive: true});
+      banner.addEventListener('click', easterEggTap);
 
       function sharkRain() {
         for (let i = 0; i < 30; i++) {
