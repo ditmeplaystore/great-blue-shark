@@ -207,6 +207,19 @@
     <input type="text" id="chapterTitle" placeholder="VD: GBS#006">
   </div>
   <div class="form-group">
+    <label>Thumbnail</label>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div id="thumbPreviewBox" style="width:64px;height:64px;border-radius:6px;background:#141414;border:1px solid #252525;overflow:hidden;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <span id="thumbPlaceholder" style="font-size:11px;color:#333;">—</span>
+        <img id="thumbPreviewImg" src="" style="width:100%;height:100%;object-fit:cover;display:none;">
+      </div>
+      <div style="flex:1;position:relative;">
+        <button class="btn btn-secondary btn-small" style="width:100%;" onclick="document.getElementById('thumbInput').click()">Chọn ảnh thumbnail</button>
+        <input type="file" id="thumbInput" accept="image/*" style="display:none;">
+      </div>
+    </div>
+  </div>
+  <div class="form-group">
     <label>Ảnh chương</label>
     <div class="dropzone" id="dropzone">
       <p>Kéo thả ảnh vào đây hoặc bấm để chọn</p>
@@ -259,6 +272,7 @@
   let chapters = [];
   let editingId = null;
   let pendingImages = [];
+  let pendingThumb = null; // { file, preview, url }
 
   // ── AUTH ──
   window.login = async function() {
@@ -332,7 +346,7 @@
       return;
     }
     container.innerHTML = chapters.map((ch, i) => {
-      const thumbUrl = ch.images && ch.images.length > 0 ? ch.images[0] : '';
+      const thumbUrl = ch.thumbnail || (ch.images && ch.images.length > 0 ? ch.images[0] : '');
       const imgCount = ch.images ? ch.images.length : 0;
       return `<div class="chapter-card">
         <div class="card-order">#${i + 1}</div>
@@ -353,16 +367,26 @@
   window.openEditor = function(id) {
     editingId = id || null;
     pendingImages = [];
+    pendingThumb = null;
     document.getElementById('chapterTitle').value = '';
     document.getElementById('imageList').innerHTML = '';
     document.getElementById('progressBar').style.display = 'none';
     document.getElementById('progressInfo').style.display = 'none';
+    document.getElementById('thumbPreviewImg').style.display = 'none';
+    document.getElementById('thumbPreviewImg').src = '';
+    document.getElementById('thumbPlaceholder').style.display = 'block';
 
     if (editingId) {
       const ch = chapters.find(c => c.id === editingId);
       if (ch) {
         document.getElementById('editorTitle').textContent = 'Sửa: ' + ch.title;
         document.getElementById('chapterTitle').value = ch.title || '';
+        if (ch.thumbnail) {
+          pendingThumb = { file: null, preview: ch.thumbnail, url: ch.thumbnail };
+          document.getElementById('thumbPreviewImg').src = ch.thumbnail;
+          document.getElementById('thumbPreviewImg').style.display = 'block';
+          document.getElementById('thumbPlaceholder').style.display = 'none';
+        }
         if (ch.images && ch.images.length > 0) {
           pendingImages = ch.images.map(url => ({ url, preview: url, file: null }));
           renderImageList();
@@ -381,6 +405,7 @@
     document.getElementById('adminPanel').classList.add('active');
     editingId = null;
     pendingImages = [];
+    pendingThumb = null;
   };
 
   window.editChapter = function(id) { window.openEditor(id); };
@@ -388,6 +413,17 @@
   // ── FILES ──
   const fileInput = document.getElementById('fileInput');
   const dropzone = document.getElementById('dropzone');
+  const thumbInput = document.getElementById('thumbInput');
+
+  thumbInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file || !file.type.startsWith('image/')) return;
+    pendingThumb = { file, preview: URL.createObjectURL(file), url: null };
+    document.getElementById('thumbPreviewImg').src = pendingThumb.preview;
+    document.getElementById('thumbPreviewImg').style.display = 'block';
+    document.getElementById('thumbPlaceholder').style.display = 'none';
+    thumbInput.value = '';
+  });
 
   fileInput.addEventListener('change', (e) => { handleFiles(e.target.files); fileInput.value = ''; });
   dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
@@ -462,7 +498,7 @@
     try {
       const toUpload = pendingImages.filter(img => img.file);
       const chapterId = editingId || ('ch_' + Date.now());
-      const folderName = title.replace(/[^a-zA-Z0-9#]/g, '_');
+      const folderName = title.replace(/[^a-zA-Z0-9]/g, '_');
 
       if (toUpload.length > 0) {
         progressBar.style.display = 'block';
@@ -470,10 +506,12 @@
       }
 
       let uploaded = 0;
-      for (const img of pendingImages) {
+      for (let idx = 0; idx < pendingImages.length; idx++) {
+        const img = pendingImages[idx];
         if (img.file) {
           const ext = img.file.name.split('.').pop();
-          const fileName = `${String(uploaded + 1).padStart(3,'0')}_${Date.now()}.${ext}`;
+          const rand = Math.random().toString(36).substr(2, 8);
+          const fileName = `page_${String(idx + 1).padStart(3,'0')}_${rand}.${ext}`;
           const path = `chapters/${folderName}/${fileName}`;
 
           progressInfo.textContent = `Đang upload ${uploaded + 1}/${toUpload.length}...`;
@@ -483,8 +521,19 @@
         }
       }
 
+      // Upload thumbnail
+      let thumbUrl = pendingThumb && pendingThumb.url ? pendingThumb.url : null;
+      if (pendingThumb && pendingThumb.file) {
+        const ext = pendingThumb.file.name.split('.').pop();
+        const rand = Math.random().toString(36).substr(2, 8);
+        const thumbPath = `chapters/${folderName}/thumb_${rand}.${ext}`;
+        progressInfo.textContent = 'Đang upload thumbnail...';
+        thumbUrl = await uploadToGitHub(pendingThumb.file, thumbPath);
+      }
+
       const chapterData = {
         title,
+        thumbnail: thumbUrl,
         images: pendingImages.map(img => img.url).filter(Boolean),
         order: editingId && chapters.find(c => c.id === editingId)
           ? chapters.find(c => c.id === editingId).order
