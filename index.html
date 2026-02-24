@@ -81,6 +81,7 @@
     left: 20px;
     right: 20px;
     z-index: 2;
+    pointer-events: none;
   }
 
   .series-info {
@@ -430,7 +431,8 @@
         if (now - lastTap > 3000) clickCount = 0;
         lastTap = now;
         clickCount++;
-        if (clickCount >= 10) {
+        document.title = 'Tap: ' + clickCount;
+        if (clickCount >= 3) {
           clickCount = 0;
           sharkRain();
         }
