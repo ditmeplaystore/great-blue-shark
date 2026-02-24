@@ -643,11 +643,19 @@
 <script>
   // ── DATA ──
   const chapters = [
-    { id: 1, title: "GBS#001" },
-    { id: 2, title: "GBS#002" },
-    { id: 3, title: "GBS#003" },
-    { id: 4, title: "GBS#004" },
-    { id: 5, title: "GBS#005" },
+    { id: 1, title: "GBS#001", images: [
+      "Không Có Tiêu Đề535.png",
+      "Không Có Tiêu Đề536.png",
+      "Không Có Tiêu Đề537.png",
+      "Không Có Tiêu Đề538.png",
+      "Không Có Tiêu Đề548.png",
+      "Không Có Tiêu Đề555_0000-00-53.png",
+      "Không Có Tiêu Đề540.png"
+    ]},
+    { id: 2, title: "GBS#002", images: [] },
+    { id: 3, title: "GBS#003", images: [] },
+    { id: 4, title: "GBS#004", images: [] },
+    { id: 5, title: "GBS#005", images: [] },
   ];
 
   let sortAsc = true;
@@ -715,6 +723,13 @@
     document.getElementById('mainView').classList.add('hidden');
     document.getElementById('readerView').classList.add('active');
     document.getElementById('readerTitle').textContent = `GBS#${String(id).padStart(3,'0')}`;
+    const ch = chapters.find(c => c.id === id);
+    const content = document.getElementById('readerContent');
+    if (ch && ch.images && ch.images.length > 0) {
+      content.innerHTML = ch.images.map(img => `<img src="${encodeURI(img)}" alt="" style="width:100%;display:block;">`).join('');
+    } else {
+      content.innerHTML = '<div class="reader-placeholder">Ảnh chapter sẽ hiển thị ở đây.<br>Cuộn xuống để đọc.</div>';
+    }
     updateReaderNav();
     window.scrollTo(0, 0);
     if (window.loadComments) window.loadComments(id);
