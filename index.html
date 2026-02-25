@@ -623,6 +623,7 @@
   }
 
   window.currentChapterForComments = 1;
+  window.replyingTo = null; // { id, name }
 
   window.postComment = async function() {
     const name = document.getElementById('commentName').value.trim();
@@ -631,13 +632,16 @@
     document.getElementById('commentName').style.borderColor = '#252525';
     if (!text) return;
     try {
-      await addDoc(collection(db, 'comments'), {
+      const commentData = {
         chapter: window.currentChapterForComments,
         name: name,
         text: text,
+        parentId: window.replyingTo ? window.replyingTo.id : null,
         timestamp: serverTimestamp()
-      });
+      };
+      await addDoc(collection(db, 'comments'), commentData);
       document.getElementById('commentText').value = '';
+      cancelReply();
     } catch(e) {
       console.error('Lỗi gửi comment:', e);
     }
@@ -657,36 +661,81 @@
         list.innerHTML = '<p style="color:#444;font-size:13px;">Chưa có bình luận nào.</p>';
         return;
       }
-      const comments = [];
-      snapshot.forEach((d) => { comments.push({ id: d.id, ...d.data() }); });
-      comments.sort((a, b) => {
+
+      const all = [];
+      snapshot.forEach((d) => { all.push({ id: d.id, ...d.data() }); });
+      all.sort((a, b) => {
         const ta = a.timestamp ? a.timestamp.seconds : 0;
         const tb = b.timestamp ? b.timestamp.seconds : 0;
         return ta - tb;
       });
-      comments.forEach((d) => {
-        const time = d.timestamp ? new Date(d.timestamp.seconds * 1000).toLocaleDateString('vi-VN') : '';
-        const safeName = d.name.replace(/'/g, "\\'");
-        const div = document.createElement('div');
-        div.style.cssText = 'padding:12px;background:#161616;border-radius:4px;margin-bottom:8px;position:relative;';
-        div.innerHTML = '<div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:12px;font-weight:600;color:#1d9bf0;">' + d.name + '</span><div style="display:flex;align-items:center;gap:8px;"><span style="font-size:11px;color:#444;">' + time + '</span><span onclick="deleteComment(\'' + d.id + '\')" style="font-size:11px;color:#333;cursor:pointer;">✕</span></div></div><p style="font-size:13px;color:#bbb;line-height:1.6;margin:0;">' + d.text.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</p><div style="margin-top:6px;"><span onclick="replyTo(\'' + safeName + '\')" style="font-size:11px;color:#555;cursor:pointer;">↩ Trả lời</span></div>';
-        list.appendChild(div);
+
+      // Tách comment gốc và replies
+      const roots = all.filter(c => !c.parentId);
+      const replies = all.filter(c => c.parentId);
+      
+      // Nhóm replies theo parentId
+      const replyMap = {};
+      replies.forEach(r => {
+        if (!replyMap[r.parentId]) replyMap[r.parentId] = [];
+        replyMap[r.parentId].push(r);
+      });
+
+      // Render comment gốc + replies bên dưới
+      const rootIds = new Set(roots.map(r => r.id));
+      roots.forEach((d) => {
+        list.appendChild(buildCommentEl(d, false));
+        const childReplies = replyMap[d.id] || [];
+        childReplies.forEach((r) => {
+          list.appendChild(buildCommentEl(r, true));
+        });
+      });
+
+      // Orphan replies (parent đã bị xóa hoặc comment cũ không có parent hợp lệ)
+      replies.forEach((r) => {
+        if (!rootIds.has(r.parentId)) {
+          list.appendChild(buildCommentEl(r, false));
+        }
       });
     });
   }
 
-  window.replyTo = function(name) {
+  function buildCommentEl(d, isReply) {
+    const time = d.timestamp ? new Date(d.timestamp.seconds * 1000).toLocaleDateString('vi-VN') : '';
+    const safeId = d.id.replace(/'/g, "\\'");
+    const safeName = d.name.replace(/'/g, "\\'").replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const safeText = d.text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const displayName = d.name.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    const div = document.createElement('div');
+    div.style.cssText = isReply
+      ? 'padding:10px 12px;background:#131318;border-radius:4px;margin-bottom:4px;margin-left:24px;border-left:2px solid #1a1a2a;'
+      : 'padding:12px;background:#161616;border-radius:4px;margin-bottom:4px;';
+
+    div.innerHTML = ''
+      + '<div style="display:flex;justify-content:space-between;margin-bottom:4px;">'
+      +   '<span style="font-size:12px;font-weight:600;color:#1d9bf0;">' + displayName + '</span>'
+      +   '<div style="display:flex;align-items:center;gap:8px;">'
+      +     '<span style="font-size:11px;color:#444;">' + time + '</span>'
+      +     '<span onclick="deleteComment(\'' + safeId + '\')" style="font-size:11px;color:#333;cursor:pointer;">✕</span>'
+      +   '</div>'
+      + '</div>'
+      + '<p style="font-size:13px;color:#bbb;line-height:1.5;margin:0;">' + safeText + '</p>'
+      + (isReply ? '' : '<div style="margin-top:5px;"><span onclick="replyTo(\'' + safeId + '\', \'' + safeName + '\')" style="font-size:11px;color:#555;cursor:pointer;">↩ Trả lời</span></div>');
+
+    return div;
+  }
+
+  window.replyTo = function(commentId, name) {
+    window.replyingTo = { id: commentId, name: name };
     document.getElementById('replyIndicator').style.display = 'block';
     document.getElementById('replyToName').textContent = name;
-    const textarea = document.getElementById('commentText');
-    textarea.value = '@' + name + ' ';
-    textarea.focus();
+    document.getElementById('commentText').focus();
   }
 
   window.cancelReply = function() {
+    window.replyingTo = null;
     document.getElementById('replyIndicator').style.display = 'none';
-    const textarea = document.getElementById('commentText');
-    textarea.value = textarea.value.replace(/@[^\s]+\s?/, '');
   }
 
   window.deleteComment = async function(commentId) {
