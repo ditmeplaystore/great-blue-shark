@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Great Blue Shark</title>
 <meta property="og:title" content="Great Blue Shark">
-<meta property="og:image" content="https://ditmeplaystore.github.io/great-blue-shark/shark.png">
+<meta property="og:image" content="https://ditmeplaystore.github.io/great-blue-shark/2d2d4163153d10c444cea8b4ddb6ae99.jpg">
 <meta property="og:url" content="https://ditmeplaystore.github.io/great-blue-shark/">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Great Blue Shark">
-<meta name="twitter:image" content="https://ditmeplaystore.github.io/great-blue-shark/shark.png">
+<meta name="twitter:image" content="https://ditmeplaystore.github.io/great-blue-shark/2d2d4163153d10c444cea8b4ddb6ae99.jpg">
 <link rel="icon" type="image/png" href="favicon.png">
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Lilita+One&display=swap" rel="stylesheet">
 <style>
@@ -18,8 +18,8 @@
 
   body {
     font-family: 'Be Vietnam Pro', sans-serif;
-    background: #0f0f0f;
-    color: #e0e0e0;
+    background: #060d18;
+    color: #c8dce8;
     min-height: 100vh;
     max-width: 940px;
     margin: 0 auto;
@@ -48,7 +48,7 @@
     left: 0;
     right: 0;
     height: 40%;
-    background: linear-gradient(to top, #0f0f0f 0%, #0f0f0fcc 20%, transparent 100%);
+    background: linear-gradient(to top, #060d18 0%, #060d18cc 20%, transparent 100%);
     z-index: 1;
     pointer-events: none;
   }
@@ -56,8 +56,8 @@
   .bubble {
     position: absolute;
     border-radius: 50%;
-    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.5), rgba(29,155,240,0.2));
-    border: 1px solid rgba(255,255,255,0.25);
+    background: radial-gradient(circle at 30% 30%, rgba(0,212,255,0.6), rgba(0,168,255,0.2));
+    border: 1px solid rgba(0,212,255,0.3);
     animation: bubbleUp linear infinite;
     pointer-events: none;
     z-index: 1;
@@ -86,7 +86,7 @@
 
   .series-info {
     padding: 12px 20px 16px;
-    border-bottom: 1px solid #1f1f1f;
+    border-bottom: 1px solid #0f2040;
   }
 
   .series-info h1 {
@@ -106,17 +106,17 @@
   .genre-tag {
     font-size: 11px;
     padding: 4px 10px;
-    background: #1a1a1a;
-    border: 1px solid #252525;
+    background: #0a1628;
+    border: 1px solid #122a4a;
     border-radius: 3px;
-    color: #888;
+    color: #5a7fa0;
   }
 
   .banner-stats {
     display: flex;
     gap: 14px;
     font-size: 12px;
-    color: #777;
+    color: #4a6a8a;
     margin-top: 10px;
   }
 
@@ -129,10 +129,10 @@
   /* ── TABS ── */
   .tabs {
     display: flex;
-    border-bottom: 1px solid #1f1f1f;
+    border-bottom: 1px solid #0f2040;
     position: sticky;
     top: 0;
-    background: #0f0f0f;
+    background: #060d18;
     z-index: 10;
   }
 
@@ -142,7 +142,7 @@
     text-align: center;
     font-size: 14px;
     font-weight: 600;
-    color: #555;
+    color: #4a6a8a;
     cursor: pointer;
     border-bottom: 2px solid transparent;
     transition: all 0.2s;
@@ -153,8 +153,8 @@
   }
 
   .tab.active {
-    color: #e0e0e0;
-    border-bottom-color: #1d9bf0;
+    color: #c8dce8;
+    border-bottom-color: #00a8ff;
   }
 
   /* ── CHAPTER HEADER ── */
@@ -168,13 +168,13 @@
   .chapter-header span {
     font-size: 14px;
     font-weight: 600;
-    color: #aaa;
+    color: #8ab0cc;
   }
 
   .sort-btn {
     background: none;
     border: none;
-    color: #666;
+    color: #3a5a7a;
     cursor: pointer;
     padding: 4px;
     font-size: 18px;
@@ -192,13 +192,13 @@
     padding: 12px 20px;
     cursor: pointer;
     transition: background 0.15s;
-    border-bottom: 1px solid #161616;
+    border-bottom: 1px solid #081420;
     text-decoration: none;
     color: inherit;
   }
 
   .chapter-item:hover {
-    background: #161616;
+    background: #081420;
   }
 
   .chapter-item.read {
@@ -215,7 +215,7 @@
     justify-content: center;
     font-size: 11px;
     font-weight: 700;
-    color: #555;
+    color: #4a6a8a;
     overflow: hidden;
   }
 
@@ -234,7 +234,7 @@
 
   .chap-label {
     font-size: 11px;
-    color: #555;
+    color: #4a6a8a;
     margin-bottom: 2px;
   }
 
@@ -249,14 +249,14 @@
 
   .chap-meta {
     font-size: 11px;
-    color: #555;
+    color: #4a6a8a;
     display: flex;
     gap: 10px;
   }
 
   .chap-desc {
     font-size: 12px;
-    color: #666;
+    color: #3a5a7a;
     margin-bottom: 4px;
     line-height: 1.4;
     display: -webkit-box;
@@ -278,14 +278,14 @@
   .details-panel h3 {
     font-size: 14px;
     font-weight: 600;
-    color: #aaa;
+    color: #8ab0cc;
     margin-bottom: 10px;
   }
 
   .details-panel p {
     font-size: 13px;
     line-height: 1.7;
-    color: #777;
+    color: #4a6a8a;
     margin-bottom: 24px;
   }
 
@@ -316,8 +316,8 @@
   .reader-nav {
     position: sticky;
     top: 0;
-    background: #0f0f0f;
-    border-bottom: 1px solid #1f1f1f;
+    background: #060d18;
+    border-bottom: 1px solid #0f2040;
     display: flex;
     align-items: center;
     padding: 12px 16px;
@@ -328,7 +328,7 @@
   .back-btn {
     background: none;
     border: none;
-    color: #aaa;
+    color: #8ab0cc;
     font-size: 20px;
     cursor: pointer;
     padding: 4px;
@@ -345,14 +345,14 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    background: #0a0a0a;
+    background: #040a14;
     min-height: 60vh;
   }
 
   .reader-placeholder {
     padding: 60px 20px;
     text-align: center;
-    color: #333;
+    color: #1a3a5a;
     font-size: 13px;
     line-height: 1.8;
   }
@@ -366,9 +366,9 @@
   .reader-bottom button {
     flex: 1;
     padding: 12px;
-    background: #1a1a1a;
-    border: 1px solid #252525;
-    color: #aaa;
+    background: #0a1628;
+    border: 1px solid #122a4a;
+    color: #8ab0cc;
     font-family: inherit;
     font-size: 13px;
     font-weight: 500;
@@ -379,7 +379,7 @@
 
   .reader-bottom button:hover {
     background: #222;
-    color: #e0e0e0;
+    color: #c8dce8;
   }
 
   .reader-bottom button:disabled {
@@ -397,11 +397,11 @@
   }
 
   /* ── COLOR PALETTE FOR THUMBNAILS ── */
-  .t1 { background: #1a1517; }
-  .t2 { background: #15171a; }
-  .t3 { background: #171a15; }
-  .t4 { background: #1a1815; }
-  .t5 { background: #17151a; }
+  .t1 { background: #0a1525; }
+  .t2 { background: #081830; }
+  .t3 { background: #0c1a28; }
+  .t4 { background: #0a1620; }
+  .t5 { background: #0b1230; }
 </style>
 </head>
 <body>
@@ -410,7 +410,7 @@
 <div class="main-view" id="mainView">
 
   <div class="hero-banner" id="heroBanner">
-    <img src="shark.png" alt="Great Blue Shark">
+    <img src="2d2d4163153d10c444cea8b4ddb6ae99.jpg" alt="Great Blue Shark">
     <div class="hero-title">
       <h1 style="font-family:'Lilita One',sans-serif;font-size:32px;font-weight:400;letter-spacing:1px;margin:0;">GREAT BLUE SHARK</h1>
     </div>
@@ -477,9 +477,9 @@
   </script>
 
   <div class="series-info">
-    <p style="font-size:12px;color:#888;margin-bottom:0;">⚠ Truyện giới hạn độ tuổi. Tác giả thù ghét mọi đối tượng bình đẳng như nhau.</p>
+    <p style="font-size:12px;color:#5a7fa0;margin-bottom:0;">⚠ Truyện giới hạn độ tuổi. Tác giả thù ghét mọi đối tượng bình đẳng như nhau.</p>
     <div id="continueReading" style="display:none;margin-top:12px;">
-      <button onclick="continueReading()" style="width:100%;padding:12px;background:#1d9bf0;border:none;border-radius:4px;color:#fff;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;">▶ Đọc tiếp GBS#001</button>
+      <button onclick="continueReading()" style="width:100%;padding:12px;background:#00a8ff;border:none;border-radius:4px;color:#fff;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;">▶ Đọc tiếp GBS#001</button>
     </div>
   </div>
 
@@ -487,7 +487,7 @@
   <div class="episodes-panel active" id="episodesPanel">
     <div style="padding:12px 20px 0;">
       <input type="text" id="searchInput" placeholder="Tìm kiếm..." oninput="searchChapters()" 
-        style="width:100%;padding:10px 12px;background:#1a1a1a;border:1px solid #252525;border-radius:4px;color:#e0e0e0;font-family:inherit;font-size:13px;outline:none;">
+        style="width:100%;padding:10px 12px;background:#0a1628;border:1px solid #122a4a;border-radius:4px;color:#c8dce8;font-family:inherit;font-size:13px;outline:none;">
     </div>
     <div class="chapter-header">
       <span id="chapCount">5 episodes</span>
@@ -512,31 +512,31 @@
     </div>
   </div>
   <div style="padding:12px 20px;display:flex;align-items:center;gap:8px;">
-    <button id="likeBtn" onclick="toggleLike()" style="background:none;border:1px solid #252525;border-radius:20px;padding:8px 16px;color:#888;font-family:inherit;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all 0.15s;">
+    <button id="likeBtn" onclick="toggleLike()" style="background:none;border:1px solid #122a4a;border-radius:20px;padding:8px 16px;color:#5a7fa0;font-family:inherit;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all 0.15s;">
       <span id="likeIcon">♡</span> <span id="likeCount">0</span>
     </button>
-    <button onclick="shareChapter()" style="background:none;border:1px solid #252525;border-radius:20px;padding:8px 16px;color:#888;font-family:inherit;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all 0.15s;">
+    <button onclick="shareChapter()" style="background:none;border:1px solid #122a4a;border-radius:20px;padding:8px 16px;color:#5a7fa0;font-family:inherit;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all 0.15s;">
       🔗 Chia sẻ
     </button>
-    <span id="shareMsg" style="font-size:11px;color:#1d9bf0;display:none;">Đã copy!</span>
+    <span id="shareMsg" style="font-size:11px;color:#00a8ff;display:none;">Đã copy!</span>
   </div>
   <div class="reader-bottom">
     <button id="prevBtn" onclick="prevChapter()">← Chap trước</button>
     <button id="nextBtn" onclick="nextChapter()">Chap sau →</button>
   </div>
   <div class="comments-section" style="padding:20px;">
-    <h3 style="font-size:14px;font-weight:600;color:#aaa;margin-bottom:16px;">Bình luận</h3>
+    <h3 style="font-size:14px;font-weight:600;color:#8ab0cc;margin-bottom:16px;">Bình luận</h3>
     <div id="commentsList" style="margin-bottom:16px;"></div>
-    <div id="replyIndicator" style="display:none;padding:8px 12px;background:#1a1a2a;border-left:3px solid #1d9bf0;border-radius:0 4px 4px 0;margin-bottom:8px;font-size:12px;color:#1d9bf0;">
-      Đang trả lời <span id="replyToName"></span> <span onclick="cancelReply()" style="margin-left:8px;cursor:pointer;color:#555;">✕</span>
+    <div id="replyIndicator" style="display:none;padding:8px 12px;background:#0d1a35;border-left:3px solid #00a8ff;border-radius:0 4px 4px 0;margin-bottom:8px;font-size:12px;color:#00a8ff;">
+      Đang trả lời <span id="replyToName"></span> <span onclick="cancelReply()" style="margin-left:8px;cursor:pointer;color:#4a6a8a;">✕</span>
     </div>
     <div class="comment-form">
       <input type="text" id="commentName" placeholder="Tên của bạn" oninput="localStorage.setItem('gbs_name', this.value)" 
-        style="width:100%;padding:10px 12px;background:#1a1a1a;border:1px solid #252525;border-radius:4px;color:#e0e0e0;font-family:inherit;font-size:13px;margin-bottom:8px;outline:none;">
+        style="width:100%;padding:10px 12px;background:#0a1628;border:1px solid #122a4a;border-radius:4px;color:#c8dce8;font-family:inherit;font-size:13px;margin-bottom:8px;outline:none;">
       <textarea id="commentText" placeholder="Viết bình luận..." rows="3"
-        style="width:100%;padding:10px 12px;background:#1a1a1a;border:1px solid #252525;border-radius:4px;color:#e0e0e0;font-family:inherit;font-size:13px;resize:vertical;outline:none;"></textarea>
+        style="width:100%;padding:10px 12px;background:#0a1628;border:1px solid #122a4a;border-radius:4px;color:#c8dce8;font-family:inherit;font-size:13px;resize:vertical;outline:none;"></textarea>
       <button onclick="postComment()" 
-        style="margin-top:8px;padding:10px 20px;background:#1d9bf0;border:none;border-radius:4px;color:#fff;font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;">Gửi</button>
+        style="margin-top:8px;padding:10px 20px;background:#00a8ff;border:none;border-radius:4px;color:#fff;font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;">Gửi</button>
     </div>
   </div>
 </div>
@@ -608,8 +608,8 @@
     const icon = document.getElementById('likeIcon');
     const btn = document.getElementById('likeBtn');
     if (icon) icon.textContent = liked ? '♥' : '♡';
-    if (btn) btn.style.borderColor = liked ? '#1d9bf0' : '#252525';
-    if (btn) btn.style.color = liked ? '#1d9bf0' : '#888';
+    if (btn) btn.style.borderColor = liked ? '#00a8ff' : '#122a4a';
+    if (btn) btn.style.color = liked ? '#00a8ff' : '#5a7fa0';
   }
 
   window.loadLikes = function(chapterId) {
@@ -628,8 +628,8 @@
   window.postComment = async function() {
     const name = document.getElementById('commentName').value.trim();
     const text = document.getElementById('commentText').value.trim();
-    if (!name) { document.getElementById('commentName').style.borderColor = '#f04040'; return; }
-    document.getElementById('commentName').style.borderColor = '#252525';
+    if (!name) { document.getElementById('commentName').style.borderColor = '#ff4060'; return; }
+    document.getElementById('commentName').style.borderColor = '#122a4a';
     if (!text) return;
     try {
       const commentData = {
@@ -658,7 +658,7 @@
       if (!list) return;
       list.innerHTML = '';
       if (snapshot.empty) {
-        list.innerHTML = '<p style="color:#444;font-size:13px;">Chưa có bình luận nào.</p>';
+        list.innerHTML = '<p style="color:#2a4a6a;font-size:13px;">Chưa có bình luận nào.</p>';
         return;
       }
 
@@ -709,19 +709,19 @@
 
     const div = document.createElement('div');
     div.style.cssText = isReply
-      ? 'padding:10px 12px;background:#131318;border-radius:4px;margin-bottom:4px;margin-left:24px;border-left:2px solid #1a1a2a;'
-      : 'padding:12px;background:#161616;border-radius:4px;margin-bottom:4px;';
+      ? 'padding:10px 12px;background:#0a1225;border-radius:4px;margin-bottom:4px;margin-left:24px;border-left:2px solid #0d1a35;'
+      : 'padding:12px;background:#081420;border-radius:4px;margin-bottom:4px;';
 
     div.innerHTML = ''
       + '<div style="display:flex;justify-content:space-between;margin-bottom:4px;">'
-      +   '<span style="font-size:12px;font-weight:600;color:#1d9bf0;">' + displayName + '</span>'
+      +   '<span style="font-size:12px;font-weight:600;color:#00a8ff;">' + displayName + '</span>'
       +   '<div style="display:flex;align-items:center;gap:8px;">'
-      +     '<span style="font-size:11px;color:#444;">' + time + '</span>'
-      +     '<span onclick="deleteComment(\'' + safeId + '\')" style="font-size:11px;color:#333;cursor:pointer;">✕</span>'
+      +     '<span style="font-size:11px;color:#2a4a6a;">' + time + '</span>'
+      +     '<span onclick="deleteComment(\'' + safeId + '\')" style="font-size:11px;color:#1a3a5a;cursor:pointer;">✕</span>'
       +   '</div>'
       + '</div>'
-      + '<p style="font-size:13px;color:#bbb;line-height:1.5;margin:0;">' + safeText + '</p>'
-      + (isReply ? '' : '<div style="margin-top:5px;"><span onclick="replyTo(\'' + safeId + '\', \'' + safeName + '\')" style="font-size:11px;color:#555;cursor:pointer;">↩ Trả lời</span></div>');
+      + '<p style="font-size:13px;color:#a0c0d8;line-height:1.5;margin:0;">' + safeText + '</p>'
+      + (isReply ? '' : '<div style="margin-top:5px;"><span onclick="replyTo(\'' + safeId + '\', \'' + safeName + '\')" style="font-size:11px;color:#4a6a8a;cursor:pointer;">↩ Trả lời</span></div>');
 
     return div;
   }
@@ -793,7 +793,7 @@
     } catch(e) {
       console.error('Lỗi tải chapters:', e);
       // Fallback: show message
-      document.getElementById('chapterList').innerHTML = '<li style="padding:20px;text-align:center;color:#555;font-size:13px;">Không tải được danh sách chương.</li>';
+      document.getElementById('chapterList').innerHTML = '<li style="padding:20px;text-align:center;color:#4a6a8a;font-size:13px;">Không tải được danh sách chương.</li>';
     }
   }
 
@@ -856,6 +856,85 @@
     if (window.loadAllLikes) window.loadAllLikes();
   }
 
+  // ── BOOKMARK ──
+  let bookmarkTimer = null;
+
+  function getBookmarks() {
+    return JSON.parse(localStorage.getItem('gbs_bookmarks') || '{}');
+  }
+
+  function saveBookmark() {
+    if (!currentChapter) return;
+    const content = document.getElementById('readerContent');
+    if (!content) return;
+    const images = content.querySelectorAll('img');
+    if (images.length === 0) return;
+
+    // Tìm ảnh đang hiện trên màn hình
+    let visibleIdx = 0;
+    const viewportMid = window.innerHeight / 3;
+    for (let i = 0; i < images.length; i++) {
+      const rect = images[i].getBoundingClientRect();
+      if (rect.top <= viewportMid && rect.bottom > 0) {
+        visibleIdx = i;
+      }
+    }
+
+    const bookmarks = getBookmarks();
+    // Nếu đang ở ảnh cuối hoặc đầu → xóa bookmark (đọc xong hoặc mới mở)
+    if (visibleIdx >= images.length - 1 || visibleIdx === 0) {
+      delete bookmarks[currentChapter];
+    } else {
+      bookmarks[currentChapter] = { imageIdx: visibleIdx };
+    }
+    localStorage.setItem('gbs_bookmarks', JSON.stringify(bookmarks));
+  }
+
+  function restoreBookmark(chapterId) {
+    const bookmarks = getBookmarks();
+    const bm = bookmarks[chapterId];
+    if (!bm) return;
+
+    const content = document.getElementById('readerContent');
+    const images = content.querySelectorAll('img');
+    if (images.length === 0 || bm.imageIdx === 0) return;
+
+    const targetImg = images[Math.min(bm.imageIdx, images.length - 1)];
+    
+    // Đợi ảnh load xong rồi mới scroll
+    let loaded = 0;
+    const totalToWait = Math.min(bm.imageIdx + 1, images.length);
+    
+    function tryScroll() {
+      targetImg.scrollIntoView({ behavior: 'instant' });
+    }
+
+    for (let i = 0; i < totalToWait; i++) {
+      if (images[i].complete) {
+        loaded++;
+        if (loaded >= totalToWait) tryScroll();
+      } else {
+        images[i].addEventListener('load', () => {
+          loaded++;
+          if (loaded >= totalToWait) tryScroll();
+        }, { once: true });
+      }
+    }
+
+    // Fallback nếu ảnh load quá lâu
+    setTimeout(tryScroll, 2000);
+  }
+
+  function startBookmarkTracking() {
+    window.addEventListener('scroll', () => {
+      if (!document.getElementById('readerView').classList.contains('active')) return;
+      clearTimeout(bookmarkTimer);
+      bookmarkTimer = setTimeout(saveBookmark, 500);
+    });
+  }
+
+  startBookmarkTracking();
+
   // ── READER ──
   function openReader(id) {
     currentChapter = id;
@@ -867,11 +946,13 @@
     const content = document.getElementById('readerContent');
     if (ch && ch.images && ch.images.length > 0) {
       content.innerHTML = ch.images.map(img => `<img src="${img}" alt="" style="width:100%;display:block;" loading="lazy">`).join('');
+      // Restore bookmark
+      restoreBookmark(id);
     } else {
       content.innerHTML = '<div class="reader-placeholder">Ảnh chapter sẽ hiển thị ở đây.<br>Cuộn xuống để đọc.</div>';
+      window.scrollTo(0, 0);
     }
     updateReaderNav();
-    window.scrollTo(0, 0);
     if (window.loadComments) window.loadComments(id);
     if (window.loadLikes) window.loadLikes(id);
     const savedName = localStorage.getItem('gbs_name');
@@ -879,6 +960,7 @@
   }
 
   function closeReader() {
+    saveBookmark();
     document.getElementById('mainView').classList.remove('hidden');
     document.getElementById('readerView').classList.remove('active');
     renderChapters();
@@ -887,10 +969,12 @@
   }
 
   function prevChapter() {
+    saveBookmark();
     if (currentChapter > 1) openReader(currentChapter - 1);
   }
 
   function nextChapter() {
+    saveBookmark();
     if (currentChapter < chapters.length) openReader(currentChapter + 1);
   }
 
@@ -920,7 +1004,7 @@
     if (readIds.length === 0) {
       if (chapters.length > 0) {
         container.style.display = 'block';
-        container.innerHTML = '<button onclick="openReader(1)" style="width:100%;padding:12px;background:#1d9bf0;border:none;border-radius:4px;color:#fff;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;">▶ Bắt đầu đọc</button>';
+        container.innerHTML = '<button onclick="openReader(1)" style="width:100%;padding:12px;background:#00a8ff;border:none;border-radius:4px;color:#fff;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;">▶ Bắt đầu đọc</button>';
       } else {
         container.style.display = 'none';
       }
@@ -930,7 +1014,7 @@
       const isNext = lastRead < chapters.length;
       const label = isNext ? 'Đọc tiếp GBS#' + String(nextCh).padStart(3, '0') : 'Đọc lại GBS#' + String(nextCh).padStart(3, '0');
       container.style.display = 'block';
-      container.innerHTML = '<button onclick="openReader(' + nextCh + ')" style="width:100%;padding:12px;background:#1d9bf0;border:none;border-radius:4px;color:#fff;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;">▶ ' + label + '</button>';
+      container.innerHTML = '<button onclick="openReader(' + nextCh + ')" style="width:100%;padding:12px;background:#00a8ff;border:none;border-radius:4px;color:#fff;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;">▶ ' + label + '</button>';
     }
   }
 
