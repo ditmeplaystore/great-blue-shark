@@ -835,6 +835,7 @@
     const safeName = d.name.replace(/'/g, "\\'").replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const safeText = d.text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const displayName = d.name.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const rootId = isReply && d.parentId ? d.parentId.replace(/'/g, "\\'") : safeId;
 
     const div = document.createElement('div');
     div.style.cssText = isReply
@@ -844,13 +845,10 @@
     div.innerHTML = ''
       + '<div style="display:flex;justify-content:space-between;margin-bottom:4px;">'
       +   '<span style="font-size:12px;font-weight:600;color:#00a8ff;">' + displayName + '</span>'
-      +   '<div style="display:flex;align-items:center;gap:8px;">'
-      +     '<span style="font-size:11px;color:#2a4a6a;">' + time + '</span>'
-      +     '<span onclick="deleteComment(\'' + safeId + '\')" style="font-size:11px;color:#1a3a5a;cursor:pointer;">✕</span>'
-      +   '</div>'
+      +   '<span style="font-size:11px;color:#2a4a6a;">' + time + '</span>'
       + '</div>'
       + '<p style="font-size:13px;color:#a0c0d8;line-height:1.5;margin:0;">' + safeText + '</p>'
-      + (isReply ? '' : '<div style="margin-top:5px;"><span onclick="replyTo(\'' + safeId + '\', \'' + safeName + '\')" style="font-size:11px;color:#4a6a8a;cursor:pointer;">↩ Trả lời</span></div>');
+      + '<div style="margin-top:5px;"><span onclick="replyTo(\'' + rootId + '\', \'' + safeName + '\')" style="font-size:11px;color:#4a6a8a;cursor:pointer;">↩ Trả lời</span></div>';
 
     return div;
   }
@@ -867,17 +865,7 @@
     document.getElementById('replyIndicator').style.display = 'none';
   }
 
-  window.deleteComment = async function(commentId) {
-    const pw = prompt('Mật khẩu admin:');
-    if (pw !== 'makocain') return;
-    try {
-      const { deleteDoc } = await import("https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js");
-      await deleteDoc(doc(db, 'comments', commentId));
-    } catch(e) {
-      console.error('Lỗi xóa comment:', e);
-    }
-  }
-</script>
+  </script>
 
 <script>
   // ── DATA (loaded from Firestore) ──
