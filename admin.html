@@ -506,8 +506,12 @@
       body: JSON.stringify(body)
     });
 
-    if (!res.ok) throw new Error((await res.json()).message || 'Upload thất bại');
-    return (await res.json()).content.download_url;
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Upload thất bại');
+    if (!data.content || !data.content.download_url) {
+      throw new Error('GitHub không trả về URL hợp lệ');
+    }
+    return data.content.download_url;
   }
 
   // ── SAVE ──
@@ -538,7 +542,7 @@
       for (let idx = 0; idx < pendingImages.length; idx++) {
         const img = pendingImages[idx];
         if (img.file) {
-          const ext = img.file.name.split('.').pop();
+          const ext = (img.file.name.split('.').pop() || 'png').toLowerCase();
           const rand = Math.random().toString(36).substr(2, 8);
           const fileName = `page_${String(idx + 1).padStart(3,'0')}_${rand}.${ext}`;
           const path = `chapters/${folderName}/${fileName}`;
@@ -553,7 +557,7 @@
       // Upload thumbnail
       let thumbUrl = pendingThumb && pendingThumb.url ? pendingThumb.url : null;
       if (pendingThumb && pendingThumb.file) {
-        const ext = pendingThumb.file.name.split('.').pop();
+        const ext = (pendingThumb.file.name.split('.').pop() || 'png').toLowerCase();
         const rand = Math.random().toString(36).substr(2, 8);
         const thumbPath = `chapters/${folderName}/thumb_${rand}.${ext}`;
         progressInfo.textContent = 'Đang upload thumbnail...';
