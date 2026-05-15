@@ -547,7 +547,12 @@
     const q = query(collection(db, 'comments'), where('chapter', '==', chapter));
     charCommentUnsub = onSnapshot(q, (snapshot) => {
       const all = [];
-      snapshot.forEach((d) => all.push({ id: d.id, ...d.data() }));
+      // Bỏ qua shadow reply (rep "vào hư không" của reader) — admin không cần thấy
+      snapshot.forEach((d) => {
+        const data = d.data();
+        if (data.shadowFor) return;
+        all.push({ id: d.id, ...data });
+      });
       all.sort((a, b) => {
         const ta = a.timestamp ? a.timestamp.seconds : 0;
         const tb = b.timestamp ? b.timestamp.seconds : 0;
