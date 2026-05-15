@@ -499,12 +499,14 @@
     document.getElementById('charCommentPanel').classList.add('active');
     
     // Populate chapter dropdown
+    // QUAN TRỌNG: value = số thứ tự (1,2,3...) để khớp với reader query `where('chapter', '==', 1)`
+    // KHÔNG dùng ch.id (firestore doc id kiểu "ch_xxx") vì reader không biết firestore id
     const chapterSelect = document.getElementById('charChapter');
     chapterSelect.innerHTML = '';
     chapters.forEach((ch, i) => {
       const opt = document.createElement('option');
-      opt.value = ch.id; // dùng ch.id thật, không phải index
-      opt.textContent = '#' + ch.id + ' - ' + (ch.title || '');
+      opt.value = i + 1; // số thứ tự, khớp với reader
+      opt.textContent = '#' + (i + 1) + ' - ' + (ch.title || '');
       chapterSelect.appendChild(opt);
     });
     
@@ -521,8 +523,10 @@
   };
 
   function loadCharCommentContext() {
-    const chapter = document.getElementById('charChapter').value;
-    if (!chapter) return;
+    const chapterRaw = document.getElementById('charChapter').value;
+    if (!chapterRaw) return;
+    const chapter = parseInt(chapterRaw, 10); // parse thành số để khớp với reader
+    if (isNaN(chapter)) return;
     
     // Load comments của chapter này để hiện trong dropdown reply + history
     if (charCommentUnsub) charCommentUnsub();
@@ -582,12 +586,14 @@
 
   window.postCharComment = async function() {
     const char = document.getElementById('charSelect').value;
-    const chapter = document.getElementById('charChapter').value;
+    const chapterRaw = document.getElementById('charChapter').value;
     const replyToId = document.getElementById('charReplyTo').value;
     const text = document.getElementById('charText').value.trim();
     
     if (!text) { showStatus('Nhập nội dung.', 'error'); return; }
-    if (!chapter) { showStatus('Chọn chương.', 'error'); return; }
+    if (!chapterRaw) { showStatus('Chọn chương.', 'error'); return; }
+    const chapter = parseInt(chapterRaw, 10);
+    if (isNaN(chapter)) { showStatus('Chương không hợp lệ.', 'error'); return; }
     
     const btn = document.getElementById('postCharBtn');
     btn.disabled = true;
@@ -595,7 +601,7 @@
     
     try {
       const commentData = {
-        chapter: chapter,
+        chapter: chapter, // SỐ, không phải string — khớp với reader
         name: char,
         text: text.slice(0, 1500).replace(/[\x00-\x1f]/g, ''),
         parentId: replyToId || null,

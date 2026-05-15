@@ -652,8 +652,8 @@
         style="width:100%;padding:10px 12px;background:#0a1628;border:1px solid #122a4a;border-radius:4px;color:#c8dce8;font-family:inherit;font-size:13px;margin-bottom:8px;outline:none;">
       <textarea id="commentText" placeholder="Viết bình luận..." rows="3" onfocus="window._formFocusTime = Date.now()"
         style="width:100%;padding:10px 12px;background:#0a1628;border:1px solid #122a4a;border-radius:4px;color:#c8dce8;font-family:inherit;font-size:13px;resize:vertical;outline:none;"></textarea>
-      <!-- Honeypot: ẩn khỏi user, bot tự động điền -->
-      <input type="text" id="website_url" name="website_url" tabindex="-1" autocomplete="off" aria-hidden="true"
+      <!-- Honeypot: ẩn khỏi user, bot tự động điền. Tên không phải "website/url/email/name" để password manager ít autofill -->
+      <input type="text" id="website_url" name="_hp_field_x9k2" tabindex="-1" autocomplete="off" aria-hidden="true"
         style="position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;">
       <button onclick="postComment()" 
         style="margin-top:8px;padding:10px 20px;background:#00a8ff;border:none;border-radius:4px;color:#fff;font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;">Gửi</button>
@@ -692,19 +692,33 @@
   window.CHARACTER_NAMES = ['Linh cẩu đốm', 'Sư tử'];
 
   // ── LOAD LIKES PER CHAPTER ──
+  // Doc id = firestoreId của chapter (ổn định khi xóa/đảo).
+  // Migrate dữ liệu cũ ở backend nếu cần (xem migrateOldData ở dưới).
+  window.likeUnsubs = {};
   window.loadAllLikes = function() {
-    const total = window.chapters ? window.chapters.length : 5;
-    for (let i = 1; i <= total; i++) {
-      const ref = doc(db, 'likes', 'chapter_' + i);
-      onSnapshot(ref, (snap) => {
+    if (!window.chapters) return;
+    // Cleanup listeners cũ
+    Object.values(window.likeUnsubs).forEach(unsub => { try { unsub(); } catch(e) {} });
+    window.likeUnsubs = {};
+    window.chapters.forEach(ch => {
+      const docId = ch.firestoreId || ('chapter_' + ch.id);
+      const ref = doc(db, 'likes', docId);
+      window.likeUnsubs[ch.id] = onSnapshot(ref, (snap) => {
         const count = snap.exists() ? Math.max(0, snap.data().count) : 0;
-        const el = document.getElementById('likes-ch-' + i);
+        const el = document.getElementById('likes-ch-' + ch.id);
         if (el) el.textContent = '♡ ' + count;
       });
-    }
+    });
+  }
+
+  // Helper: lấy likes doc id từ chapter id (số). Cần `window.chapters` đã load.
+  function getLikesDocId(chapterId) {
+    const ch = window.chapters && window.chapters.find(c => c.id === chapterId);
+    return ch && ch.firestoreId ? ch.firestoreId : ('chapter_' + chapterId);
   }
 
   // ── LIKES ──
+  // likedChapters key = firestoreId (ổn định khi xóa/đảo chapter)
   window.likedChapters = JSON.parse(localStorage.getItem('gbs_likes') || '{}');
   window.likeBusy = false;
 
@@ -712,8 +726,9 @@
     if (window.likeBusy) return;
     window.likeBusy = true;
     const id = window.currentChapterForComments;
-    const ref = doc(db, 'likes', 'chapter_' + id);
-    const willLike = !window.likedChapters[id];
+    const docId = getLikesDocId(id);
+    const ref = doc(db, 'likes', docId);
+    const willLike = !window.likedChapters[docId];
     try {
       await runTransaction(db, async (transaction) => {
         const snap = await transaction.get(ref);
@@ -722,9 +737,9 @@
         transaction.set(ref, { count: newCount });
       });
       if (willLike) {
-        window.likedChapters[id] = true;
+        window.likedChapters[docId] = true;
       } else {
-        delete window.likedChapters[id];
+        delete window.likedChapters[docId];
       }
       localStorage.setItem('gbs_likes', JSON.stringify(window.likedChapters));
       updateLikeButton(id);
@@ -735,7 +750,8 @@
   }
 
   window.updateLikeButton = function(chapterId) {
-    const liked = window.likedChapters[chapterId];
+    const docId = getLikesDocId(chapterId);
+    const liked = window.likedChapters[docId];
     const icon = document.getElementById('likeIcon');
     const btn = document.getElementById('likeBtn');
     if (icon) icon.textContent = liked ? '♥' : '♡';
@@ -744,7 +760,8 @@
   }
 
   window.loadLikes = function(chapterId) {
-    const ref = doc(db, 'likes', 'chapter_' + chapterId);
+    const docId = getLikesDocId(chapterId);
+    const ref = doc(db, 'likes', docId);
     onSnapshot(ref, (snap) => {
       const count = snap.exists() ? snap.data().count : 0;
       const el = document.getElementById('likeCount');
@@ -759,17 +776,20 @@
   window._lastCommentTime = 0;
   window._formFocusTime = 0;
   window.postComment = async function() {
-    // Anti-bot 1: Honeypot - bot thường tự động điền vào input ẩn
+    // Anti-bot 1: Honeypot - bot thường tự động điền vào input ẩn.
+    // Lưu ý: browser/password manager có thể autofill. Check thêm:
+    //  - Value khác default ("") 
+    //  - User đã focus form (autofill xảy ra trước user interaction)
     const honeypot = document.getElementById('website_url');
-    if (honeypot && honeypot.value) {
+    if (honeypot && honeypot.value && honeypot.value !== honeypot.defaultValue && window._formFocusTime > 0) {
       // Im lặng giả vờ thành công để bot không retry
       document.getElementById('commentText').value = '';
       cancelReply();
       return;
     }
 
-    // Anti-bot 2: Time check - bot submit quá nhanh
-    if (window._formFocusTime && (Date.now() - window._formFocusTime) < 3000) {
+    // Anti-bot 2: Time check - bot submit quá nhanh hoặc submit mà không focus form
+    if (!window._formFocusTime || (Date.now() - window._formFocusTime) < 3000) {
       // Im lặng, không thông báo để bot không học cách bypass
       return;
     }
@@ -988,6 +1008,18 @@
   let chapters = [];
   let chaptersLoaded = false;
 
+  // Helper: lấy stable key cho chapter (dùng firestoreId nếu có).
+  // Dùng cho mọi storage key (localStorage, Firestore likes doc id).
+  // KHÔNG dùng id 1,2,3 trực tiếp vì id sẽ shift khi xóa/đảo chapter.
+  function getChapterKey(idOrChapter) {
+    const ch = typeof idOrChapter === 'object'
+      ? idOrChapter
+      : chapters.find(c => c.id === idOrChapter);
+    if (ch && ch.firestoreId) return ch.firestoreId;
+    return 'ch_' + (typeof idOrChapter === 'object' ? idOrChapter.id : idOrChapter);
+  }
+  window.getChapterKey = getChapterKey;
+
   async function loadChaptersFromFirestore() {
     try {
       // Wait for Firebase to be ready
@@ -1013,6 +1045,37 @@
       });
       chaptersLoaded = true;
       window.chapters = chapters;
+
+      // ── MIGRATE localStorage cũ (key số 1,2,3) sang key firestoreId ──
+      // Chạy 1 lần, đánh dấu trong localStorage để khỏi chạy lại
+      if (!localStorage.getItem('gbs_migrated_v1')) {
+        try {
+          const oldRead = JSON.parse(localStorage.getItem('gbs_read') || '{}');
+          const oldBookmarks = JSON.parse(localStorage.getItem('gbs_bookmarks') || '{}');
+          const oldLikes = JSON.parse(localStorage.getItem('gbs_likes') || '{}');
+          const newRead = {};
+          const newBookmarks = {};
+          const newLikes = {};
+          chapters.forEach(ch => {
+            const newKey = ch.firestoreId;
+            if (oldRead[ch.id]) newRead[newKey] = true;
+            if (oldBookmarks[ch.id]) newBookmarks[newKey] = oldBookmarks[ch.id];
+            // likes cũ lưu theo id số, mới lưu theo doc id Firestore
+            if (oldLikes[ch.id]) newLikes[newKey] = true;
+          });
+          // Giữ luôn key cũ nếu chưa được map (phòng trường hợp chapter bị xóa khỏi DB)
+          Object.keys(oldRead).forEach(k => { if (!(k in newRead)) newRead[k] = oldRead[k]; });
+          Object.keys(oldBookmarks).forEach(k => { if (!(k in newBookmarks)) newBookmarks[k] = oldBookmarks[k]; });
+          Object.keys(oldLikes).forEach(k => { if (!(k in newLikes)) newLikes[k] = oldLikes[k]; });
+          localStorage.setItem('gbs_read', JSON.stringify(newRead));
+          localStorage.setItem('gbs_bookmarks', JSON.stringify(newBookmarks));
+          localStorage.setItem('gbs_likes', JSON.stringify(newLikes));
+          localStorage.setItem('gbs_migrated_v1', '1');
+          // Reload biến trong memory (đã đọc trước migration)
+          window.likedChapters = newLikes;
+        } catch(e) { console.warn('Migrate localStorage lỗi:', e); }
+      }
+
       renderChapters();
       updateContinueReading();
       if (window.loadAllLikes) window.loadAllLikes();
@@ -1034,20 +1097,26 @@
   let currentChapter = 0;
 
   // ── READ HISTORY ──
+  // Key: firestoreId (ổn định khi xóa/đảo chapter). Migrate dữ liệu cũ ở loadChaptersFromFirestore.
   function getReadHistory() {
     return JSON.parse(localStorage.getItem('gbs_read') || '{}');
   }
 
   function markAsRead(id) {
     const history = getReadHistory();
-    history[id] = true;
+    const key = getChapterKey(id);
+    history[key] = true;
     localStorage.setItem('gbs_read', JSON.stringify(history));
+  }
+
+  function isChapterRead(id) {
+    const history = getReadHistory();
+    return !!history[getChapterKey(id)];
   }
 
   // ── RENDER CHAPTERS ──
   function renderChapters(filter) {
     const list = document.getElementById('chapterList');
-    const history = getReadHistory();
     let sorted = sortAsc ? [...chapters] : [...chapters].reverse();
     if (filter) {
       const q = filter.toLowerCase();
@@ -1055,7 +1124,7 @@
     }
     document.getElementById('chapCount').textContent = sorted.length + ' episodes';
     list.innerHTML = sorted.map(ch => {
-      const isRead = history[ch.id];
+      const isRead = isChapterRead(ch.id);
       const safeTitle = ch.title ? window.escapeHtml(ch.title) : '';
       const safeDesc = ch.description ? window.escapeHtml(ch.description) : '';
       const safeThumb = ch.thumbnail ? window.escapeHtml(ch.thumbnail) : 'thumb.png';
@@ -1117,18 +1186,19 @@
     }
 
     const bookmarks = getBookmarks();
+    const key = getChapterKey(currentChapter);
     // Nếu đang ở ảnh cuối hoặc đầu → xóa bookmark (đọc xong hoặc mới mở)
     if (visibleIdx >= images.length - 1 || visibleIdx === 0) {
-      delete bookmarks[currentChapter];
+      delete bookmarks[key];
     } else {
-      bookmarks[currentChapter] = { imageIdx: visibleIdx };
+      bookmarks[key] = { imageIdx: visibleIdx };
     }
     localStorage.setItem('gbs_bookmarks', JSON.stringify(bookmarks));
   }
 
   function restoreBookmark(chapterId) {
     const bookmarks = getBookmarks();
-    const bm = bookmarks[chapterId];
+    const bm = bookmarks[getChapterKey(chapterId)];
     if (!bm) return;
 
     const content = document.getElementById('readerContent');
@@ -1264,12 +1334,12 @@
 
   function updateContinueReading() {
     const history = getReadHistory();
-    const validIds = chapters.map(c => c.id);
-    const readIds = Object.keys(history).map(Number).filter(id => validIds.includes(id)).sort((a, b) => a - b);
+    // Tìm chapter đã đọc cuối cùng dựa trên firestoreId/key, rồi map về index 1,2,3
+    const readChapters = chapters.filter(ch => history[getChapterKey(ch)]);
     const container = document.getElementById('continueReading');
     if (!container) return;
 
-    if (readIds.length === 0) {
+    if (readChapters.length === 0) {
       if (chapters.length > 0) {
         container.style.display = 'block';
         container.innerHTML = '<button onclick="openReader(1)" style="width:100%;padding:12px;background:#00a8ff;border:none;border-radius:4px;color:#fff;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;">▶ Bắt đầu đọc</button>';
@@ -1277,7 +1347,7 @@
         container.style.display = 'none';
       }
     } else {
-      const lastRead = Math.max(...readIds);
+      const lastRead = Math.max(...readChapters.map(c => c.id));
       const nextCh = lastRead < chapters.length ? lastRead + 1 : lastRead;
       const isNext = lastRead < chapters.length;
       const label = isNext ? 'Đọc tiếp #' + nextCh : 'Đọc lại #' + nextCh;
