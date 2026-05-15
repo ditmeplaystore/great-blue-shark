@@ -37,34 +37,12 @@
   .login-box .hint { font-size: 11px; color: #333; margin-bottom: 16px; }
 
   /* Token input: type=text nhưng vẫn ẩn ký tự bằng CSS để password manager
-     không tự fill (vì chỉ nhắm vào type=password). Có nút 👁 toggle. */
-  .token-wrap { position: relative; margin-bottom: 12px; }
-  .token-wrap input {
-    margin-bottom: 0 !important;
-    padding-right: 42px !important;
+     không tự fill (vì chỉ nhắm vào type=password). */
+  .login-box input.masked {
     -webkit-text-security: disc;
     text-security: disc;
     font-family: text-security-disc, monospace;
   }
-  .token-wrap input.show-token {
-    -webkit-text-security: none;
-    text-security: none;
-    font-family: inherit;
-  }
-  .token-toggle {
-    position: absolute;
-    right: 8px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: none;
-    border: none;
-    color: #555;
-    font-size: 16px;
-    cursor: pointer;
-    padding: 6px 8px;
-    line-height: 1;
-  }
-  .token-toggle:hover { color: #1d9bf0; }
 
   .btn {
     padding: 10px 20px; border: none; border-radius: 6px;
@@ -210,13 +188,11 @@
     <p>Great Blue Shark — Quản lý chương</p>
     <input type="email" id="emailInput" placeholder="Email" autocomplete="username" autofocus>
     <input type="password" id="passwordInput" placeholder="Mật khẩu" autocomplete="current-password">
-    <div class="token-wrap">
-      <input type="text" id="tokenInput" placeholder="GitHub Token (ghp_...)"
-             autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
-             name="gh_api_key_x9k2" data-lpignore="true" data-1p-ignore="true"
-             data-form-type="other" data-bwignore="true">
-      <button type="button" class="token-toggle" id="tokenToggle" onclick="toggleTokenVisibility()" tabindex="-1" aria-label="Hiện/ẩn token">👁</button>
-    </div>
+    <input type="text" id="tokenInput" placeholder="GitHub Token (ghp_...)"
+           class="masked"
+           autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+           name="gh_api_key_x9k2" data-lpignore="true" data-1p-ignore="true"
+           data-form-type="other" data-bwignore="true">
     <div class="hint">Token lấy ở github.com/settings/tokens</div>
     <div class="error" id="loginError">Sai email/mật khẩu hoặc token.</div>
     <button class="btn btn-primary" onclick="login()">Đăng nhập</button>
@@ -351,13 +327,6 @@
   let pendingThumb = null; // { file, preview, url }
 
   // ── AUTH ──
-  window.toggleTokenVisibility = function() {
-    const inp = document.getElementById('tokenInput');
-    const btn = document.getElementById('tokenToggle');
-    inp.classList.toggle('show-token');
-    btn.textContent = inp.classList.contains('show-token') ? '🙈' : '👁';
-  };
-
   window.login = async function() {
     const email = document.getElementById('emailInput').value.trim();
     const pw = document.getElementById('passwordInput').value;
