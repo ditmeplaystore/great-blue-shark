@@ -553,16 +553,43 @@
         return ta - tb;
       });
       
-      // Populate reply dropdown - chỉ comment gốc (không phải reply)
+      // Populate reply dropdown: hiển thị cả comment gốc lẫn reply.
+      // value = id thật của comment được rep (để hiện tên đúng).
+      // dataset.rootId = id của root (parentId nếu là reply, hoặc chính id nếu là root).
+      // Khi đăng, parentId trong DB sẽ lưu rootId → tree luôn 2 tầng, không lồng sâu.
       const replySelect = document.getElementById('charReplyTo');
       replySelect.innerHTML = '<option value="">— Không, comment gốc —</option>';
-      all.filter(c => !c.parentId).forEach(c => {
+      
+      // Nhóm reply theo parentId để render theo thứ tự cây
+      const roots = all.filter(c => !c.parentId);
+      const replyMap = {};
+      all.filter(c => c.parentId).forEach(r => {
+        if (!replyMap[r.parentId]) replyMap[r.parentId] = [];
+        replyMap[r.parentId].push(r);
+      });
+      
+      function addOption(c, isReply, rootId) {
         const opt = document.createElement('option');
         opt.value = c.id;
-        opt.dataset.authorName = c.name; // Lưu tên để dùng sau, tránh parse text
+        opt.dataset.authorName = c.name;
+        opt.dataset.rootId = rootId;
         const preview = (c.text || '').slice(0, 40);
-        opt.textContent = c.name + ': ' + preview + (c.text.length > 40 ? '...' : '');
+        const prefix = isReply ? '   └ ' : '';
+        opt.textContent = prefix + c.name + ': ' + preview + (c.text.length > 40 ? '...' : '');
         replySelect.appendChild(opt);
+      }
+      
+      roots.forEach(root => {
+        addOption(root, false, root.id);
+        (replyMap[root.id] || []).forEach(reply => {
+          addOption(reply, true, root.id);
+        });
+      });
+      
+      // Orphan replies (parent đã bị xóa) - vẫn cho rep, dùng chính id của reply làm root
+      const rootIds = new Set(roots.map(r => r.id));
+      all.filter(c => c.parentId && !rootIds.has(c.parentId)).forEach(orphan => {
+        addOption(orphan, false, orphan.id);
       });
       
       // History: liệt kê comment nhân vật đã đăng
@@ -612,22 +639,26 @@
     btn.textContent = 'Đang đăng...';
     
     try {
+      // Khi rep, parentId trong DB luôn là rootId (giữ tree 2 tầng).
+      // replyToName là tên người trực tiếp được rep (có thể là root hoặc reply khác).
+      let parentIdForDb = null;
+      let replyToNameForDb = null;
+      if (replyToId) {
+        const replySelect = document.getElementById('charReplyTo');
+        const selectedOpt = replySelect.options[replySelect.selectedIndex];
+        parentIdForDb = selectedOpt.dataset.rootId || replyToId;
+        replyToNameForDb = selectedOpt.dataset.authorName || null;
+      }
+      
       const commentData = {
         chapter: chapter, // SỐ, không phải string — khớp với reader
         name: char,
         text: text.slice(0, 1500).replace(/[\x00-\x1f]/g, ''),
-        parentId: replyToId || null,
-        replyToName: null,
+        parentId: parentIdForDb,
+        replyToName: replyToNameForDb,
         isCharacter: true,
         timestamp: serverTimestamp()
       };
-      
-      // Nếu là reply, lấy tên người được reply
-      if (replyToId) {
-        const replySelect = document.getElementById('charReplyTo');
-        const selectedOpt = replySelect.options[replySelect.selectedIndex];
-        commentData.replyToName = selectedOpt.dataset.authorName || null;
-      }
       
       await addDoc(collection(db, 'comments'), commentData);
       document.getElementById('charText').value = '';

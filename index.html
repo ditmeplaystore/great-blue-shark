@@ -324,6 +324,27 @@
     min-height: 60vh;
   }
 
+  /* Chặn user-friendly cách tải ảnh: select, drag, long-press menu */
+  .reader-content img {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-user-drag: none;
+    -khtml-user-drag: none;
+    -moz-user-drag: none;
+    -o-user-drag: none;
+    user-drag: none;
+    pointer-events: none;
+    -webkit-touch-callout: none;
+  }
+
+  .reader-content .img-wrapper {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
   .reader-placeholder {
     padding: 60px 20px;
     text-align: center;
@@ -1257,6 +1278,39 @@
   }
 
   startBookmarkTracking();
+
+  // ── CHẶN TẢI ẢNH (chỉ áp dụng khi đang ở reader) ──
+  function isInReader() {
+    const r = document.getElementById('readerView');
+    return r && r.classList.contains('active');
+  }
+
+  // Chặn chuột phải (contextmenu) trong reader
+  document.addEventListener('contextmenu', (e) => {
+    if (!isInReader()) return;
+    const target = e.target;
+    // Chỉ chặn trên ảnh và vùng reader-content
+    if (target.tagName === 'IMG' || target.closest('.reader-content')) {
+      e.preventDefault();
+    }
+  });
+
+  // Chặn drag ảnh
+  document.addEventListener('dragstart', (e) => {
+    if (!isInReader()) return;
+    if (e.target.tagName === 'IMG' || e.target.closest('.reader-content')) {
+      e.preventDefault();
+    }
+  });
+
+  // Chặn Ctrl+S, Ctrl+Shift+S, Ctrl+U (view source) khi ở reader
+  document.addEventListener('keydown', (e) => {
+    if (!isInReader()) return;
+    const k = e.key.toLowerCase();
+    if ((e.ctrlKey || e.metaKey) && (k === 's' || k === 'u')) {
+      e.preventDefault();
+    }
+  });
 
   // ── IMAGE LOAD HANDLERS ──
   function imgLoaded(i) {
