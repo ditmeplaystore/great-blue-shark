@@ -192,7 +192,8 @@
     <h1>🦈 GBS Admin</h1>
     <button class="logout" onclick="logout()">Đăng xuất</button>
   </div>
-  <button class="btn btn-primary" style="width:100%;margin-bottom:20px;" onclick="openEditor()">+ Thêm chương mới</button>
+  <button class="btn btn-primary" style="width:100%;margin-bottom:10px;" onclick="openEditor()">+ Thêm chương mới</button>
+  <button class="btn btn-secondary" style="width:100%;margin-bottom:20px;" onclick="openCharComment()">🦁 Bình luận nhân vật</button>
   <div id="chapterListAdmin">
     <div class="loading"><div class="spinner"></div><br>Đang tải...</div>
   </div>
@@ -238,6 +239,40 @@
   <button class="btn btn-primary" style="width:100%;" id="saveBtn" onclick="saveChapter()">Lưu chương</button>
 </div>
 
+<div class="editor" id="charCommentPanel">
+  <div class="editor-header">
+    <button class="btn btn-secondary btn-small" onclick="closeCharComment()">← Quay lại</button>
+    <h2>🦁 Bình luận nhân vật</h2>
+  </div>
+  <div class="form-group">
+    <label>Nhân vật</label>
+    <select id="charSelect" style="width:100%;padding:10px 12px;background:#141414;border:1px solid #252525;border-radius:6px;color:#e0e0e0;font-family:inherit;font-size:13px;outline:none;">
+      <option value="Linh cẩu đốm">🐺 Linh cẩu đốm</option>
+      <option value="Sư tử">🦁 Sư tử</option>
+    </select>
+  </div>
+  <div class="form-group">
+    <label>Chương</label>
+    <select id="charChapter" style="width:100%;padding:10px 12px;background:#141414;border:1px solid #252525;border-radius:6px;color:#e0e0e0;font-family:inherit;font-size:13px;outline:none;"></select>
+  </div>
+  <div class="form-group">
+    <label>Trả lời comment nào (tùy chọn)</label>
+    <select id="charReplyTo" style="width:100%;padding:10px 12px;background:#141414;border:1px solid #252525;border-radius:6px;color:#e0e0e0;font-family:inherit;font-size:13px;outline:none;">
+      <option value="">— Không, comment gốc —</option>
+    </select>
+  </div>
+  <div class="form-group">
+    <label>Nội dung</label>
+    <textarea id="charText" rows="5" placeholder="Nội dung comment..." style="width:100%;padding:10px 12px;background:#141414;border:1px solid #252525;border-radius:6px;color:#e0e0e0;font-family:inherit;font-size:13px;outline:none;resize:vertical;"></textarea>
+  </div>
+  <button class="btn btn-primary" style="width:100%;" id="postCharBtn" onclick="postCharComment()">Đăng</button>
+  
+  <div style="margin-top:30px;border-top:1px solid #1a1a1a;padding-top:20px;">
+    <h3 style="font-size:13px;color:#888;margin-bottom:12px;">Comment đã đăng (chương này)</h3>
+    <div id="charCommentHistory" style="font-size:12px;color:#666;">Chọn chương để xem.</div>
+  </div>
+</div>
+
 <div class="overlay" id="confirmOverlay">
   <div class="dialog">
     <h3 id="confirmTitle">Xác nhận</h3>
@@ -253,7 +288,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
-  import { getFirestore, collection, doc, getDocs, setDoc, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
+  import { getFirestore, collection, doc, getDocs, setDoc, deleteDoc, addDoc, query, orderBy, where, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
   import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-auth.js";
 
   const firebaseConfig = {
@@ -353,6 +388,18 @@
     loadChapters();
   }
 
+  function escapeHtml(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+  function escapeJs(s) {
+    return String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  }
+
   // ── LOAD ──
   async function loadChapters() {
     try {
@@ -375,16 +422,21 @@
     container.innerHTML = chapters.map((ch, i) => {
       const thumbUrl = ch.thumbnail || (ch.images && ch.images.length > 0 ? ch.images[0] : '');
       const imgCount = ch.images ? ch.images.length : 0;
+      const safeTitle = escapeHtml(ch.title || 'Chương ' + (i+1));
+      const safeThumb = escapeHtml(thumbUrl);
+      const safeIdAttr = escapeHtml(ch.id);
+      const safeIdJs = escapeJs(ch.id);
+      const safeTitleJs = escapeJs(ch.title || '');
       return `<div class="chapter-card">
         <div class="card-order">#${i + 1}</div>
-        <div class="card-thumb">${thumbUrl ? `<img src="${thumbUrl}">` : '<span style="font-size:11px;color:#333;">—</span>'}</div>
+        <div class="card-thumb">${thumbUrl ? `<img src="${safeThumb}">` : '<span style="font-size:11px;color:#333;">—</span>'}</div>
         <div class="card-info">
-          <div class="card-title">${ch.title || 'Chương ' + (i+1)}</div>
+          <div class="card-title">${safeTitle}</div>
           <div class="card-meta">${imgCount} ảnh</div>
         </div>
         <div class="card-actions">
-          <button class="btn btn-secondary btn-small" onclick="editChapter('${ch.id}')">Sửa</button>
-          <button class="btn btn-danger btn-small" onclick="confirmDelete('${ch.id}', '${(ch.title||'').replace(/'/g,"\\'")}')">Xóa</button>
+          <button class="btn btn-secondary btn-small" onclick="editChapter('${safeIdJs}')">Sửa</button>
+          <button class="btn btn-danger btn-small" onclick="confirmDelete('${safeIdJs}', '${safeTitleJs}')">Xóa</button>
         </div>
       </div>`;
     }).join('');
@@ -439,6 +491,138 @@
 
   window.editChapter = function(id) { window.openEditor(id); };
 
+  // ── CHARACTER COMMENT ──
+  let charCommentUnsub = null;
+
+  window.openCharComment = function() {
+    document.getElementById('adminPanel').classList.remove('active');
+    document.getElementById('charCommentPanel').classList.add('active');
+    
+    // Populate chapter dropdown
+    const chapterSelect = document.getElementById('charChapter');
+    chapterSelect.innerHTML = '';
+    chapters.forEach((ch, i) => {
+      const opt = document.createElement('option');
+      opt.value = ch.id; // dùng ch.id thật, không phải index
+      opt.textContent = '#' + ch.id + ' - ' + (ch.title || '');
+      chapterSelect.appendChild(opt);
+    });
+    
+    chapterSelect.onchange = loadCharCommentContext;
+    if (chapters.length > 0) loadCharCommentContext();
+  };
+
+  window.closeCharComment = function() {
+    document.getElementById('charCommentPanel').classList.remove('active');
+    document.getElementById('adminPanel').classList.add('active');
+    if (charCommentUnsub) { charCommentUnsub(); charCommentUnsub = null; }
+    document.getElementById('charText').value = '';
+    document.getElementById('charReplyTo').value = '';
+  };
+
+  function loadCharCommentContext() {
+    const chapter = document.getElementById('charChapter').value;
+    if (!chapter) return;
+    
+    // Load comments của chapter này để hiện trong dropdown reply + history
+    if (charCommentUnsub) charCommentUnsub();
+    
+    const q = query(collection(db, 'comments'), where('chapter', '==', chapter));
+    charCommentUnsub = onSnapshot(q, (snapshot) => {
+      const all = [];
+      snapshot.forEach((d) => all.push({ id: d.id, ...d.data() }));
+      all.sort((a, b) => {
+        const ta = a.timestamp ? a.timestamp.seconds : 0;
+        const tb = b.timestamp ? b.timestamp.seconds : 0;
+        return ta - tb;
+      });
+      
+      // Populate reply dropdown - chỉ comment gốc (không phải reply)
+      const replySelect = document.getElementById('charReplyTo');
+      replySelect.innerHTML = '<option value="">— Không, comment gốc —</option>';
+      all.filter(c => !c.parentId).forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.dataset.authorName = c.name; // Lưu tên để dùng sau, tránh parse text
+        const preview = (c.text || '').slice(0, 40);
+        opt.textContent = c.name + ': ' + preview + (c.text.length > 40 ? '...' : '');
+        replySelect.appendChild(opt);
+      });
+      
+      // History: liệt kê comment nhân vật đã đăng
+      const charComments = all.filter(c => c.isCharacter);
+      const historyEl = document.getElementById('charCommentHistory');
+      if (charComments.length === 0) {
+        historyEl.innerHTML = '<span style="color:#444;">Chưa có comment nhân vật ở chương này.</span>';
+      } else {
+        historyEl.innerHTML = charComments.map(c => {
+          const time = c.timestamp ? new Date(c.timestamp.seconds * 1000).toLocaleString('vi-VN') : '';
+          const safeText = escapeHtml(c.text || '');
+          const safeName = escapeHtml(c.name || '');
+          const safeIdJs = escapeJs(c.id);
+          return '<div style="padding:8px;background:#111;border:1px solid #1a1a1a;border-radius:4px;margin-bottom:6px;">'
+            + '<div style="color:#1d9bf0;font-weight:600;margin-bottom:4px;">' + safeName + (c.parentId ? ' <span style="color:#555;font-weight:400;">(reply)</span>' : '') + '</div>'
+            + '<div style="color:#aaa;line-height:1.4;white-space:pre-wrap;">' + safeText + '</div>'
+            + '<div style="color:#444;font-size:10px;margin-top:4px;">' + time + ' · <span onclick="deleteCharComment(\'' + safeIdJs + '\')" style="cursor:pointer;color:#f04040;">Xóa</span></div>'
+            + '</div>';
+        }).join('');
+      }
+    });
+  }
+
+  window.deleteCharComment = async function(id) {
+    if (!confirm('Xóa comment này?')) return;
+    try {
+      await deleteDoc(doc(db, 'comments', id));
+      showStatus('Đã xóa.', 'success');
+    } catch(e) {
+      showStatus('Lỗi: ' + e.message, 'error');
+    }
+  };
+
+  window.postCharComment = async function() {
+    const char = document.getElementById('charSelect').value;
+    const chapter = document.getElementById('charChapter').value;
+    const replyToId = document.getElementById('charReplyTo').value;
+    const text = document.getElementById('charText').value.trim();
+    
+    if (!text) { showStatus('Nhập nội dung.', 'error'); return; }
+    if (!chapter) { showStatus('Chọn chương.', 'error'); return; }
+    
+    const btn = document.getElementById('postCharBtn');
+    btn.disabled = true;
+    btn.textContent = 'Đang đăng...';
+    
+    try {
+      const commentData = {
+        chapter: chapter,
+        name: char,
+        text: text.slice(0, 1500).replace(/[\x00-\x1f]/g, ''),
+        parentId: replyToId || null,
+        replyToName: null,
+        isCharacter: true,
+        timestamp: serverTimestamp()
+      };
+      
+      // Nếu là reply, lấy tên người được reply
+      if (replyToId) {
+        const replySelect = document.getElementById('charReplyTo');
+        const selectedOpt = replySelect.options[replySelect.selectedIndex];
+        commentData.replyToName = selectedOpt.dataset.authorName || null;
+      }
+      
+      await addDoc(collection(db, 'comments'), commentData);
+      document.getElementById('charText').value = '';
+      showStatus('Đã đăng với tư cách ' + char + '!', 'success');
+    } catch(e) {
+      console.error(e);
+      showStatus('Lỗi: ' + e.message, 'error');
+    }
+    
+    btn.disabled = false;
+    btn.textContent = 'Đăng';
+  };
+
   // ── FILES ──
   const fileInput = document.getElementById('fileInput');
   const dropzone = document.getElementById('dropzone');
@@ -471,8 +655,8 @@
     document.getElementById('imageList').innerHTML = pendingImages.map((img, i) => `
       <div class="image-item">
         <div class="img-order">${i + 1}</div>
-        <img class="img-preview" src="${img.preview}">
-        <div class="img-name">${img.file ? img.file.name : 'Ảnh đã upload'}</div>
+        <img class="img-preview" src="${escapeHtml(img.preview)}">
+        <div class="img-name">${escapeHtml(img.file ? img.file.name : 'Ảnh đã upload')}</div>
         <button class="img-remove" onclick="removeImage(${i})">✕</button>
       </div>
     `).join('');

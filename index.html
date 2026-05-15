@@ -650,8 +650,11 @@
     <div class="comment-form">
       <input type="text" id="commentName" placeholder="Tên của bạn" oninput="localStorage.setItem('gbs_name', this.value)" 
         style="width:100%;padding:10px 12px;background:#0a1628;border:1px solid #122a4a;border-radius:4px;color:#c8dce8;font-family:inherit;font-size:13px;margin-bottom:8px;outline:none;">
-      <textarea id="commentText" placeholder="Viết bình luận..." rows="3"
+      <textarea id="commentText" placeholder="Viết bình luận..." rows="3" onfocus="window._formFocusTime = Date.now()"
         style="width:100%;padding:10px 12px;background:#0a1628;border:1px solid #122a4a;border-radius:4px;color:#c8dce8;font-family:inherit;font-size:13px;resize:vertical;outline:none;"></textarea>
+      <!-- Honeypot: ẩn khỏi user, bot tự động điền -->
+      <input type="text" id="website_url" name="website_url" tabindex="-1" autocomplete="off" aria-hidden="true"
+        style="position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;">
       <button onclick="postComment()" 
         style="margin-top:8px;padding:10px 20px;background:#00a8ff;border:none;border-radius:4px;color:#fff;font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;">Gửi</button>
     </div>
@@ -676,6 +679,17 @@
   const db = getFirestore(app);
   window.firebaseDb = db;
   window.firebaseReady = true;
+
+  // ── BROWSER ID (cho shadow reply) ──
+  // Random ID gắn với browser, dùng để filter shadow reply chỉ hiện cho người post
+  if (!localStorage.getItem('gbs_bid')) {
+    const bid = Math.random().toString(36).slice(2) + Date.now().toString(36) + Math.random().toString(36).slice(2);
+    localStorage.setItem('gbs_bid', bid);
+  }
+  window.browserId = localStorage.getItem('gbs_bid');
+
+  // ── CHARACTER NAMES (cho UI styling) ──
+  window.CHARACTER_NAMES = ['Linh cẩu đốm', 'Sư tử'];
 
   // ── LOAD LIKES PER CHAPTER ──
   window.loadAllLikes = function() {
@@ -743,7 +757,23 @@
   window.replyingTo = null; // { id, name }
 
   window._lastCommentTime = 0;
+  window._formFocusTime = 0;
   window.postComment = async function() {
+    // Anti-bot 1: Honeypot - bot thường tự động điền vào input ẩn
+    const honeypot = document.getElementById('website_url');
+    if (honeypot && honeypot.value) {
+      // Im lặng giả vờ thành công để bot không retry
+      document.getElementById('commentText').value = '';
+      cancelReply();
+      return;
+    }
+
+    // Anti-bot 2: Time check - bot submit quá nhanh
+    if (window._formFocusTime && (Date.now() - window._formFocusTime) < 3000) {
+      // Im lặng, không thông báo để bot không học cách bypass
+      return;
+    }
+
     // Rate limit: 30 giây giữa các comment
     const now = Date.now();
     if (now - window._lastCommentTime < 30000) {
@@ -757,6 +787,12 @@
     document.getElementById('commentName').style.borderColor = '#122a4a';
     if (!text) return;
 
+    // Chặn reader dùng tên nhân vật (sẽ bị Firestore rules reject nữa, đây là check client để UX tốt hơn)
+    if (window.CHARACTER_NAMES && window.CHARACTER_NAMES.some(n => n.toLowerCase() === name.toLowerCase())) {
+      alert('Tên này không khả dụng.');
+      return;
+    }
+
     // Giới hạn độ dài
     if (name.length > 30) name = name.slice(0, 30);
     if (text.length > 1500) text = text.slice(0, 1500);
@@ -764,6 +800,12 @@
     // Loại bỏ ký tự điều khiển
     name = name.replace(/[\x00-\x1f]/g, '');
     text = text.replace(/[\x00-\x1f]/g, '').replace(/\n{3,}/g, '\n\n');
+
+    // Check xem có đang reply nhân vật không → shadow reply
+    let shadowFor = null;
+    if (window.replyingTo && window.replyingTo.isCharacterTarget) {
+      shadowFor = window.browserId;
+    }
 
     try {
       const commentData = {
@@ -774,6 +816,7 @@
         replyToName: window.replyingTo ? window.replyingTo.name : null,
         timestamp: serverTimestamp()
       };
+      if (shadowFor) commentData.shadowFor = shadowFor;
       await addDoc(collection(db, 'comments'), commentData);
       window._lastCommentTime = Date.now();
       document.getElementById('commentText').value = '';
@@ -793,22 +836,31 @@
       const list = document.getElementById('commentsList');
       if (!list) return;
       list.innerHTML = '';
-      if (snapshot.empty) {
-        list.innerHTML = '<p style="color:#2a4a6a;font-size:13px;">Chưa có bình luận nào.</p>';
-        return;
-      }
 
       const all = [];
       snapshot.forEach((d) => { all.push({ id: d.id, ...d.data() }); });
-      all.sort((a, b) => {
+      
+      // Lọc shadow reply: nếu có shadowFor, chỉ hiện cho browser đó
+      const filtered = all.filter(c => {
+        if (!c.shadowFor) return true; // Comment thường, hiện cho tất cả
+        return c.shadowFor === window.browserId; // Shadow reply, chỉ hiện cho người post
+      });
+      
+      // Check empty SAU KHI filter
+      if (filtered.length === 0) {
+        list.innerHTML = '<p style="color:#2a4a6a;font-size:13px;">Chưa có bình luận nào.</p>';
+        return;
+      }
+      
+      filtered.sort((a, b) => {
         const ta = a.timestamp ? a.timestamp.seconds : 0;
         const tb = b.timestamp ? b.timestamp.seconds : 0;
         return ta - tb;
       });
 
       // Tách comment gốc và replies
-      const roots = all.filter(c => !c.parentId);
-      const replies = all.filter(c => c.parentId);
+      const roots = filtered.filter(c => !c.parentId);
+      const replies = filtered.filter(c => c.parentId);
       
       // Nhóm replies theo parentId
       const replyMap = {};
@@ -836,33 +888,89 @@
     });
   }
 
+  function formatRelativeTime(seconds) {
+    if (!seconds) return '';
+    const now = Date.now() / 1000;
+    const diff = now - seconds;
+    
+    if (diff < 0) return 'vừa xong';
+    if (diff < 60) return 'vừa xong';
+    if (diff < 3600) {
+      const m = Math.floor(diff / 60);
+      return m + ' phút trước';
+    }
+    if (diff < 86400) {
+      const h = Math.floor(diff / 3600);
+      return h + ' giờ trước';
+    }
+    if (diff < 86400 * 7) {
+      const d = Math.floor(diff / 86400);
+      return d + ' ngày trước';
+    }
+    if (diff < 86400 * 30) {
+      const w = Math.floor(diff / (86400 * 7));
+      return w + ' tuần trước';
+    }
+    if (diff < 86400 * 365) {
+      const mo = Math.floor(diff / (86400 * 30));
+      return mo + ' tháng trước';
+    }
+    const y = Math.floor(diff / (86400 * 365));
+    return y + ' năm trước';
+  }
+
+  window.escapeHtml = function(s) {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  };
+
+  function escapeHtml(s) { return window.escapeHtml(s); }
+
   function buildCommentEl(d, isReply) {
-    const time = d.timestamp ? new Date(d.timestamp.seconds * 1000).toLocaleDateString('vi-VN') : '';
-    const safeId = d.id.replace(/'/g, "\\'");
-    const safeName = d.name.replace(/'/g, "\\'").replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    const safeText = d.text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    const displayName = d.name.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    const rootId = isReply && d.parentId ? d.parentId.replace(/'/g, "\\'") : safeId;
-    const replyTag = d.replyToName ? ' <span style="font-size:11px;color:#4a6a8a;font-weight:400;">→ ' + d.replyToName.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</span>' : '';
+    const time = d.timestamp ? formatRelativeTime(d.timestamp.seconds) : '';
+    // Escape cho onclick inline: backslash trước, rồi single quote
+    const safeId = d.id.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    const safeName = d.name.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    const safeText = escapeHtml(d.text);
+    const displayName = escapeHtml(d.name);
+    const rootId = isReply && d.parentId ? d.parentId.replace(/\\/g, '\\\\').replace(/'/g, "\\'") : safeId;
+    const replyTag = d.replyToName ? ' <span style="font-size:11px;color:#4a6a8a;font-weight:400;">→ ' + escapeHtml(d.replyToName) + '</span>' : '';
+    
+    const isChar = d.isCharacter === true;
+    const charBadge = isChar ? '<span style="display:inline-block;margin-right:6px;padding:2px 6px;font-size:10px;border-radius:3px;background:#1a2030;color:#ffa500;font-weight:600;letter-spacing:0.3px;">NHÂN VẬT</span>' : '';
+    const nameColor = isChar ? '#ffa500' : '#00a8ff';
 
     const div = document.createElement('div');
-    div.style.cssText = isReply
-      ? 'padding:10px 12px;background:#0a1225;border-radius:4px;margin-bottom:4px;margin-left:24px;border-left:2px solid #0d1a35;'
-      : 'padding:12px;background:#081420;border-radius:4px;margin-bottom:4px;';
+    if (isChar) {
+      div.style.cssText = isReply
+        ? 'padding:10px 12px;background:#1a1408;border-radius:4px;margin-bottom:4px;margin-left:24px;border-left:2px solid #ffa500;'
+        : 'padding:12px;background:#1a1408;border-radius:4px;margin-bottom:4px;border-left:3px solid #ffa500;';
+    } else {
+      div.style.cssText = isReply
+        ? 'padding:10px 12px;background:#0a1225;border-radius:4px;margin-bottom:4px;margin-left:24px;border-left:2px solid #0d1a35;'
+        : 'padding:12px;background:#081420;border-radius:4px;margin-bottom:4px;';
+    }
+
+    // Đánh dấu reply tới character → shadow reply
+    const replyArg = isChar ? 'true' : 'false';
 
     div.innerHTML = ''
       + '<div style="display:flex;justify-content:space-between;margin-bottom:4px;">'
-      +   '<span style="font-size:12px;font-weight:600;color:#00a8ff;">' + displayName + replyTag + '</span>'
+      +   '<span style="font-size:12px;font-weight:600;color:' + nameColor + ';">' + charBadge + displayName + replyTag + '</span>'
       +   '<span style="font-size:11px;color:#2a4a6a;">' + time + '</span>'
       + '</div>'
-      + '<p style="font-size:13px;color:#a0c0d8;line-height:1.5;margin:0;">' + safeText + '</p>'
-      + '<div style="margin-top:5px;"><span onclick="replyTo(\'' + rootId + '\', \'' + safeName + '\')" style="font-size:11px;color:#4a6a8a;cursor:pointer;">↩ Trả lời</span></div>';
+      + '<p style="font-size:13px;color:#a0c0d8;line-height:1.5;margin:0;white-space:pre-wrap;">' + safeText + '</p>'
+      + '<div style="margin-top:5px;"><span onclick="replyTo(\'' + rootId + '\', \'' + safeName + '\', ' + replyArg + ')" style="font-size:11px;color:#4a6a8a;cursor:pointer;">↩ Trả lời</span></div>';
 
     return div;
   }
 
-  window.replyTo = function(commentId, name) {
-    window.replyingTo = { id: commentId, name: name };
+  window.replyTo = function(commentId, name, isCharacterTarget) {
+    window.replyingTo = { id: commentId, name: name, isCharacterTarget: !!isCharacterTarget };
     document.getElementById('replyIndicator').style.display = 'block';
     document.getElementById('replyToName').textContent = name;
     document.getElementById('commentText').focus();
@@ -948,16 +1056,19 @@
     document.getElementById('chapCount').textContent = sorted.length + ' episodes';
     list.innerHTML = sorted.map(ch => {
       const isRead = history[ch.id];
+      const safeTitle = ch.title ? window.escapeHtml(ch.title) : '';
+      const safeDesc = ch.description ? window.escapeHtml(ch.description) : '';
+      const safeThumb = ch.thumbnail ? window.escapeHtml(ch.thumbnail) : 'thumb.png';
       return `
       <a class="chapter-item${isRead ? ' read' : ''}" onclick="openReader(${ch.id})">
         <div class="chap-thumb">
-          <img src="${ch.thumbnail || 'thumb.png'}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:4px;" loading="lazy">
+          <img src="${safeThumb}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:4px;" loading="lazy">
         </div>
         <div class="chap-info">
           <div class="chap-title">
-            #${ch.id}${ch.title && ch.title !== ('#' + ch.id) ? ' - ' + ch.title.replace(/</g,'&lt;').replace(/>/g,'&gt;') : ''}
+            #${ch.id}${ch.title && ch.title !== ('#' + ch.id) ? ' - ' + safeTitle : ''}
           </div>
-          ${ch.description ? `<div class="chap-desc">${ch.description.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>` : ''}
+          ${safeDesc ? `<div class="chap-desc">${safeDesc}</div>` : ''}
           <div class="chap-meta">
             <span id="likes-ch-${ch.id}">♡ 0</span>
           </div>
@@ -1101,7 +1212,7 @@
     document.getElementById('readerTitle').textContent = titleText;
     const content = document.getElementById('readerContent');
     if (ch && ch.images && ch.images.length > 0) {
-      content.innerHTML = ch.images.map((img, i) => `<div class="img-wrapper" id="imgWrap${i}"><img src="${img}" alt="" loading="lazy" onload="imgLoaded(${i})" onerror="imgError(${i})"></div>`).join('');
+      content.innerHTML = ch.images.map((img, i) => `<div class="img-wrapper" id="imgWrap${i}"><img src="${window.escapeHtml(img)}" alt="" loading="lazy" onload="imgLoaded(${i})" onerror="imgError(${i})"></div>`).join('');
       // Restore bookmark
       restoreBookmark(id);
     } else {
