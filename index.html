@@ -913,14 +913,38 @@
         replyMap[r.parentId].push(r);
       });
 
-      // Render comment gốc + replies bên dưới
+      // Render comment gốc + replies bên dưới (replies thu lại được)
       const rootIds = new Set(roots.map(r => r.id));
       roots.forEach((d) => {
         list.appendChild(buildCommentEl(d, false));
         const childReplies = replyMap[d.id] || [];
-        childReplies.forEach((r) => {
-          list.appendChild(buildCommentEl(r, true));
-        });
+        if (childReplies.length > 0) {
+          // Lưu state mở/đóng theo id comment gốc, mặc định đóng
+          if (!window._repliesOpen) window._repliesOpen = {};
+          const isOpen = !!window._repliesOpen[d.id];
+
+          // Container chứa replies (ẩn/hiện được)
+          const repliesBox = document.createElement('div');
+          repliesBox.id = 'replies-' + d.id;
+          repliesBox.style.display = isOpen ? 'block' : 'none';
+          childReplies.forEach((r) => {
+            repliesBox.appendChild(buildCommentEl(r, true));
+          });
+
+          // Nút toggle
+          const toggleBtn = document.createElement('div');
+          toggleBtn.id = 'toggle-' + d.id;
+          toggleBtn.style.cssText = 'margin-left:24px;margin-bottom:4px;padding:6px 12px;font-size:12px;color:#5a7fa0;cursor:pointer;user-select:none;display:inline-block;';
+          toggleBtn.textContent = isOpen
+            ? '▾ Ẩn ' + childReplies.length + ' trả lời'
+            : '▸ Xem ' + childReplies.length + ' trả lời';
+          // Escape id cho onclick inline
+          const safeRootId = d.id.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+          toggleBtn.onclick = function() { window.toggleReplies(safeRootId, childReplies.length); };
+
+          list.appendChild(toggleBtn);
+          list.appendChild(repliesBox);
+        }
       });
 
       // Orphan replies (parent đã bị xóa hoặc comment cũ không có parent hợp lệ)
@@ -1005,10 +1029,26 @@
     return div;
   }
 
+  window.toggleReplies = function(rootId, count) {
+    if (!window._repliesOpen) window._repliesOpen = {};
+    const box = document.getElementById('replies-' + rootId);
+    const btn = document.getElementById('toggle-' + rootId);
+    if (!box || !btn) return;
+    const willOpen = box.style.display === 'none';
+    box.style.display = willOpen ? 'block' : 'none';
+    btn.textContent = willOpen
+      ? '▾ Ẩn ' + count + ' trả lời'
+      : '▸ Xem ' + count + ' trả lời';
+    window._repliesOpen[rootId] = willOpen;
+  }
+
   window.replyTo = function(commentId, name, isCharacterTarget) {
     window.replyingTo = { id: commentId, name: name, isCharacterTarget: !!isCharacterTarget };
     document.getElementById('replyIndicator').style.display = 'block';
     document.getElementById('replyToName').textContent = name;
+    // Mở sẵn box replies của root để user thấy reply mình sắp post
+    if (!window._repliesOpen) window._repliesOpen = {};
+    window._repliesOpen[commentId] = true;
     document.getElementById('commentText').focus();
   }
 
