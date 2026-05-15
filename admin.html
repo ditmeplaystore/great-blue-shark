@@ -547,12 +547,7 @@
     const q = query(collection(db, 'comments'), where('chapter', '==', chapter));
     charCommentUnsub = onSnapshot(q, (snapshot) => {
       const all = [];
-      // Bỏ qua shadow reply (rep "vào hư không" của reader) — admin không cần thấy
-      snapshot.forEach((d) => {
-        const data = d.data();
-        if (data.shadowFor) return;
-        all.push({ id: d.id, ...data });
-      });
+      snapshot.forEach((d) => all.push({ id: d.id, ...d.data() }));
       all.sort((a, b) => {
         const ta = a.timestamp ? a.timestamp.seconds : 0;
         const tb = b.timestamp ? b.timestamp.seconds : 0;
@@ -900,20 +895,46 @@
   }
 
   // Xóa 1 file trên GitHub
+  // sha có thể bị stale nếu đã có commit mới chen vào → refetch sha trước khi xóa
   async function deleteGitHubFile(path, sha) {
-    const res = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${path}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `token ${GH_TOKEN}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        message: `Delete: ${path}`,
-        sha: sha,
-        branch: GH_BRANCH
-      })
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || ('Delete lỗi: ' + res.status));
+    // Helper: thực hiện DELETE với sha cho trước
+    async function doDelete(useSha) {
+      const r = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${path}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `token ${GH_TOKEN}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: `Delete: ${path}`,
+          sha: useSha,
+          branch: GH_BRANCH
+        })
+      });
+      return r;
     }
+
+    // Lần 1: dùng sha có sẵn
+    let res = await doDelete(sha);
+    if (res.ok) return;
+
+    // Nếu 404/409/422 → có thể sha stale, refetch và thử lại
+    if (res.status === 404 || res.status === 409 || res.status === 422) {
+      try {
+        const check = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${path}?ref=${GH_BRANCH}`, {
+          headers: { 'Authorization': `token ${GH_TOKEN}` }
+        });
+        if (check.status === 404) return; // File đã không còn, coi như xóa xong
+        if (check.ok) {
+          const data = await check.json();
+          if (data && data.sha) {
+            res = await doDelete(data.sha);
+            if (res.ok) return;
+          }
+        }
+      } catch(e) {}
+    }
+
+    // Vẫn lỗi
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || ('Delete lỗi: ' + res.status));
   }
 
   // Xóa toàn bộ folder của 1 chapter trên GitHub
@@ -1011,17 +1032,30 @@
 
       // 4. Xóa từng folder
       let done = 0;
+      let totalDeleted = 0;
+      let totalFailed = 0;
       for (const folder of orphans) {
-        showStatus('Đang xóa ' + (done + 1) + '/' + orphans.length + ': ' + folder, 'success');
         const folderPath = `chapters/${folder}`;
         const files = await listGitHubFolder(folderPath);
-        for (const f of files) {
-          await deleteGitHubFile(f.path, f.sha);
+        for (let i = 0; i < files.length; i++) {
+          const f = files[i];
+          showStatus('Folder ' + (done + 1) + '/' + orphans.length + ' (' + folder + '): file ' + (i + 1) + '/' + files.length, 'success');
+          try {
+            await deleteGitHubFile(f.path, f.sha);
+            totalDeleted++;
+          } catch(e) {
+            console.warn('Xóa fail:', f.path, e);
+            totalFailed++;
+          }
         }
         done++;
       }
 
-      showStatus('Đã xóa ' + done + ' folder rác.', 'success');
+      if (totalFailed > 0) {
+        showStatus('Xong: xóa ' + totalDeleted + ' file, fail ' + totalFailed + ' file (xem console).', 'error');
+      } else {
+        showStatus('Đã xóa ' + totalDeleted + ' file trong ' + done + ' folder rác.', 'success');
+      }
     } catch(e) {
       console.error(e);
       showStatus('Lỗi: ' + e.message, 'error');
