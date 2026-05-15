@@ -811,6 +811,40 @@
 
       await setDoc(doc(db, 'chapters', chapterId), chapterData);
 
+      // ── CLEANUP: xóa file orphan trong các folder của chapter này ──
+      // Sau khi save, quét folder hiện tại + các folder cũ (nếu đổi title đổi folder name),
+      // file nào không có URL trong chapterData.images/thumbnail thì xóa.
+      try {
+        // Tập URL hợp lệ sau khi save
+        const validUrls = new Set();
+        (chapterData.images || []).forEach(u => validUrls.add(u));
+        if (chapterData.thumbnail) validUrls.add(chapterData.thumbnail);
+
+        // Tập folder mà chapter này từng dùng (suy từ URL):
+        // bao gồm folder hiện tại + folder cũ (nếu rename title)
+        const foldersToCheck = new Set([folderName]);
+        validUrls.forEach(url => {
+          const m = url.match(/\/chapters\/([^/]+)\//);
+          if (m) foldersToCheck.add(m[1]);
+        });
+
+        for (const folder of foldersToCheck) {
+          const files = await listGitHubFolder(`chapters/${folder}`);
+          for (const f of files) {
+            // f.path = "chapters/FOLDER/page_xxx.png"
+            // So với download_url. download_url = raw.githubusercontent.com/owner/repo/branch/path
+            // Tốt nhất là so theo tên file ở cuối path.
+            const fileBasename = f.path.split('/').pop();
+            const isUsed = [...validUrls].some(url => url.endsWith('/' + fileBasename));
+            if (!isUsed) {
+              try { await deleteGitHubFile(f.path, f.sha); } catch(e) { console.warn('Cleanup fail:', f.path, e); }
+            }
+          }
+        }
+      } catch(e) {
+        console.warn('Cleanup orphan files lỗi (không nghiêm trọng):', e);
+      }
+
       progressBar.style.display = 'none';
       progressInfo.style.display = 'none';
       progressFill.style.width = '0%';
