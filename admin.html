@@ -574,6 +574,9 @@
         opt.value = c.id;
         opt.dataset.authorName = c.name;
         opt.dataset.rootId = rootId;
+        // Lưu suffix + hue của comment được rep để khi nhân vật post sẽ có replyToSuffix/replyToHue đúng
+        if (c.userSuffix) opt.dataset.userSuffix = c.userSuffix;
+        if (c.userHue != null) opt.dataset.userHue = String(c.userHue);
         const preview = (c.text || '').slice(0, 40);
         const prefix = isReply ? '   └ ' : '';
         opt.textContent = prefix + c.name + ': ' + preview + (c.text.length > 40 ? '...' : '');
@@ -624,6 +627,16 @@
     }
   };
 
+  // Suffix + hue hardcode cho nhân vật (đồng bộ với index.html)
+  const CHARACTER_SUFFIX = {
+    'Linh cẩu đốm': '9675',
+    'Sư tử': '9689'
+  };
+  const CHARACTER_HUE = {
+    'Linh cẩu đốm': 35,
+    'Sư tử': 15
+  };
+
   window.postCharComment = async function() {
     const char = document.getElementById('charSelect').value;
     const chapterRaw = document.getElementById('charChapter').value;
@@ -644,11 +657,25 @@
       // replyToName là tên người trực tiếp được rep (có thể là root hoặc reply khác).
       let parentIdForDb = null;
       let replyToNameForDb = null;
+      let replyToSuffixForDb = null;
+      let replyToHueForDb = null;
       if (replyToId) {
         const replySelect = document.getElementById('charReplyTo');
         const selectedOpt = replySelect.options[replySelect.selectedIndex];
         parentIdForDb = selectedOpt.dataset.rootId || replyToId;
         replyToNameForDb = selectedOpt.dataset.authorName || null;
+        // Suffix + hue của comment được rep
+        if (selectedOpt.dataset.userSuffix) {
+          replyToSuffixForDb = selectedOpt.dataset.userSuffix;
+        }
+        if (selectedOpt.dataset.userHue) {
+          replyToHueForDb = Number(selectedOpt.dataset.userHue);
+        }
+        // Nếu rep nhân vật khác (vd Linh cẩu rep Sư tử) → dùng hardcode
+        if (replyToNameForDb && CHARACTER_SUFFIX[replyToNameForDb] !== undefined) {
+          replyToSuffixForDb = CHARACTER_SUFFIX[replyToNameForDb];
+          replyToHueForDb = CHARACTER_HUE[replyToNameForDb];
+        }
       }
       
       const commentData = {
@@ -657,6 +684,10 @@
         text: text.slice(0, 1500).replace(/[\x00-\x1f]/g, ''),
         parentId: parentIdForDb,
         replyToName: replyToNameForDb,
+        replyToSuffix: replyToSuffixForDb,
+        replyToHue: replyToHueForDb,
+        userSuffix: CHARACTER_SUFFIX[char] || null,
+        userHue: CHARACTER_HUE[char] != null ? CHARACTER_HUE[char] : null,
         isCharacter: true,
         timestamp: serverTimestamp()
       };

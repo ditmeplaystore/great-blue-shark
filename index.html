@@ -714,6 +714,73 @@
 
   // ── CHARACTER NAMES (cho UI styling) ──
   window.CHARACTER_NAMES = ['Linh cẩu đốm', 'Sư tử'];
+  window.CHARACTER_SUFFIX = {
+    'Linh cẩu đốm': '9675',
+    'Sư tử': '9689'
+  };
+
+  // ── USER HASH / SUFFIX / HUE ──
+  // Suffix 4 ký tự [a-z0-9] derive từ djb2(browserId + 'suffix_salt_v1').
+  // Hue (0-360) derive từ djb2(browserId + 'hue_salt_v1') → suffix và hue không suy ngược được ra browserId.
+  // Lưu suffix + hue vào DB khi post comment để mọi máy đều thấy giống nhau.
+  // djb2 đủ phân tán cho mục đích này, không cần crypto.
+  function djb2(str) {
+    let h = 5381;
+    for (let i = 0; i < str.length; i++) {
+      h = ((h << 5) + h + str.charCodeAt(i)) >>> 0; // unsigned 32-bit
+    }
+    return h;
+  }
+
+  // Suffix: 4 ký tự [a-z0-9]
+  function browserIdToSuffix(bid) {
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    let h = djb2(bid + 'suffix_salt_v1');
+    let out = '';
+    for (let i = 0; i < 4; i++) {
+      out += chars[h % 36];
+      h = Math.floor(h / 36) + djb2(out + bid); // re-mix để 4 ký tự không bị correlated
+    }
+    return out;
+  }
+
+  // Hue 0-360
+  function browserIdToHue(bid) {
+    return djb2(bid + 'hue_salt_v1') % 360;
+  }
+
+  // Nhân vật: hue cố định (Linh cẩu cam-vàng, Sư tử đỏ-cam)
+  const CHARACTER_HUE = {
+    'Linh cẩu đốm': 35,
+    'Sư tử': 15
+  };
+  window.CHARACTER_HUE_LOOKUP = CHARACTER_HUE;
+
+  // Lấy { suffix, hue } cho 1 comment.
+  // Nhân vật: hardcode. Reader: ưu tiên field DB, fallback null nếu comment cũ.
+  function getCommentIdentity(commentData) {
+    const name = commentData.name;
+    if (window.CHARACTER_SUFFIX[name] !== undefined) {
+      return {
+        suffix: window.CHARACTER_SUFFIX[name],
+        hue: CHARACTER_HUE[name] != null ? CHARACTER_HUE[name] : 200
+      };
+    }
+    if (commentData.userSuffix && commentData.userHue != null) {
+      return { suffix: commentData.userSuffix, hue: commentData.userHue };
+    }
+    return null;
+  }
+
+  // Style cho suffix: HSL với S=70%, L=65% (đọc rõ trên nền #060d18)
+  function suffixStyle(hue) {
+    return 'color: hsl(' + hue + ', 70%, 65%); font-weight: 500;';
+  }
+
+  window.getCommentIdentity = getCommentIdentity;
+  window.suffixStyle = suffixStyle;
+  window.browserIdToSuffix = browserIdToSuffix;
+  window.browserIdToHue = browserIdToHue;
 
   // ── LOAD LIKES PER CHAPTER ──
   // Doc id = firestoreId của chapter (ổn định khi xóa/đảo).
@@ -852,12 +919,19 @@
     }
 
     try {
+      const userSuffix = browserIdToSuffix(window.browserId);
+      const userHue = browserIdToHue(window.browserId);
+
       const commentData = {
         chapter: window.currentChapterForComments,
         name: name,
         text: text,
         parentId: window.replyingTo ? window.replyingTo.id : null,
         replyToName: window.replyingTo ? window.replyingTo.name : null,
+        replyToSuffix: window.replyingTo ? window.replyingTo.suffix : null,
+        replyToHue: window.replyingTo && window.replyingTo.hue != null ? window.replyingTo.hue : null,
+        userSuffix: userSuffix,
+        userHue: userHue,
         timestamp: serverTimestamp()
       };
       if (shadowFor) commentData.shadowFor = shadowFor;
@@ -1006,8 +1080,33 @@
     const safeText = escapeHtml(d.text);
     const displayName = escapeHtml(d.name);
     const rootId = isReply && d.parentId ? d.parentId.replace(/\\/g, '\\\\').replace(/'/g, "\\'") : safeId;
-    const replyTag = d.replyToName ? ' <span style="font-size:11px;color:#4a6a8a;font-weight:400;">→ ' + escapeHtml(d.replyToName) + '</span>' : '';
-    
+
+    // Identity của comment này (suffix + hue để hiện sau tên)
+    const identity = window.getCommentIdentity(d);
+    let suffixHtml = '';
+    if (identity) {
+      suffixHtml = ' <span style="' + window.suffixStyle(identity.hue) + 'font-size:11px;">#' + escapeHtml(identity.suffix) + '</span>';
+    }
+
+    // Reply tag: "→ Tên #suffix" với suffix có màu
+    let replyTag = '';
+    if (d.replyToName) {
+      let replyTagHtml = ' <span style="font-size:11px;color:#4a6a8a;font-weight:400;">→ ' + escapeHtml(d.replyToName);
+      // Suffix của người được rep
+      // Comment cũ không có replyToSuffix/replyToHue → check nhân vật trước
+      let rSuffix = d.replyToSuffix;
+      let rHue = d.replyToHue;
+      if ((!rSuffix || rHue == null) && window.CHARACTER_SUFFIX[d.replyToName] !== undefined) {
+        rSuffix = window.CHARACTER_SUFFIX[d.replyToName];
+        rHue = window.CHARACTER_HUE_LOOKUP[d.replyToName] != null ? window.CHARACTER_HUE_LOOKUP[d.replyToName] : 200;
+      }
+      if (rSuffix && rHue != null) {
+        replyTagHtml += ' <span style="' + window.suffixStyle(Number(rHue)) + '">#' + escapeHtml(rSuffix) + '</span>';
+      }
+      replyTagHtml += '</span>';
+      replyTag = replyTagHtml;
+    }
+
     const isChar = d.isCharacter === true;
 
     const div = document.createElement('div');
@@ -1017,14 +1116,17 @@
 
     // Đánh dấu reply tới character → shadow reply (logic giữ, UI ẩn)
     const replyArg = isChar ? 'true' : 'false';
+    // Truyền suffix + hue của comment này vào replyTo để hiển thị trong indicator
+    const safeSuffix = identity ? identity.suffix.replace(/'/g, "\\'") : '';
+    const safeHue = identity ? String(identity.hue) : '';
 
     div.innerHTML = ''
       + '<div style="display:flex;justify-content:space-between;margin-bottom:4px;">'
-      +   '<span style="font-size:12px;font-weight:600;color:#00a8ff;">' + displayName + replyTag + '</span>'
+      +   '<span style="font-size:12px;font-weight:600;color:#00a8ff;">' + displayName + suffixHtml + replyTag + '</span>'
       +   '<span style="font-size:11px;color:#2a4a6a;">' + time + '</span>'
       + '</div>'
       + '<p style="font-size:13px;color:#a0c0d8;line-height:1.5;margin:0;white-space:pre-wrap;">' + safeText + '</p>'
-      + '<div style="margin-top:5px;"><span onclick="replyTo(\'' + rootId + '\', \'' + safeName + '\', ' + replyArg + ')" style="font-size:11px;color:#4a6a8a;cursor:pointer;">↩ Trả lời</span></div>';
+      + '<div style="margin-top:5px;"><span onclick="replyTo(\'' + rootId + '\', \'' + safeName + '\', ' + replyArg + ', \'' + safeSuffix + '\', \'' + safeHue + '\')" style="font-size:11px;color:#4a6a8a;cursor:pointer;">↩ Trả lời</span></div>';
 
     return div;
   }
@@ -1042,10 +1144,22 @@
     window._repliesOpen[rootId] = willOpen;
   }
 
-  window.replyTo = function(commentId, name, isCharacterTarget) {
-    window.replyingTo = { id: commentId, name: name, isCharacterTarget: !!isCharacterTarget };
+  window.replyTo = function(commentId, name, isCharacterTarget, replySuffix, replyHue) {
+    window.replyingTo = {
+      id: commentId,
+      name: name,
+      isCharacterTarget: !!isCharacterTarget,
+      suffix: replySuffix || null,
+      hue: (replyHue != null && replyHue !== '') ? Number(replyHue) : null
+    };
     document.getElementById('replyIndicator').style.display = 'block';
-    document.getElementById('replyToName').textContent = name;
+    // Hiện tên + suffix có màu trong indicator
+    const nameEl = document.getElementById('replyToName');
+    let html = window.escapeHtml(name);
+    if (replySuffix && replyHue != null && replyHue !== '') {
+      html += ' <span style="' + window.suffixStyle(Number(replyHue)) + '">#' + window.escapeHtml(replySuffix) + '</span>';
+    }
+    nameEl.innerHTML = html;
     // Mở sẵn box replies của root để user thấy reply mình sắp post
     if (!window._repliesOpen) window._repliesOpen = {};
     window._repliesOpen[commentId] = true;
