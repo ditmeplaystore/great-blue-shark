@@ -765,34 +765,70 @@
 
   // ── GITHUB UPLOAD ──
   async function uploadToGitHub(file, path) {
+    if (!file) throw new Error('uploadToGitHub: file rỗng');
+    if (!GH_TOKEN) throw new Error('Không có GitHub token (đăng nhập lại)');
+
     const base64 = await new Promise((res, rej) => {
       const r = new FileReader();
-      r.onload = () => res(r.result.split(',')[1]);
-      r.onerror = rej;
+      r.onload = () => {
+        const result = r.result;
+        if (typeof result !== 'string' || result.indexOf(',') === -1) {
+          rej(new Error('FileReader không đọc được ảnh (file lỗi?)'));
+          return;
+        }
+        res(result.split(',')[1]);
+      };
+      r.onerror = () => rej(new Error('FileReader lỗi: ' + (r.error && r.error.message || 'unknown')));
       r.readAsDataURL(file);
     });
+
+    if (!base64) throw new Error('Base64 rỗng sau khi đọc ' + (file.name || 'file'));
 
     let sha = null;
     try {
       const check = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${path}`, {
         headers: { 'Authorization': `token ${GH_TOKEN}` }
       });
-      if (check.ok) sha = (await check.json()).sha;
-    } catch(e) {}
+      if (check.ok) {
+        const checkData = await check.json();
+        sha = checkData && checkData.sha ? checkData.sha : null;
+      }
+    } catch(e) { /* file chưa tồn tại, OK */ }
 
     const body = { message: `Upload: ${path}`, content: base64, branch: GH_BRANCH };
     if (sha) body.sha = sha;
 
-    const res = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${path}`, {
-      method: 'PUT',
-      headers: { 'Authorization': `token ${GH_TOKEN}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
+    let res;
+    try {
+      res = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${path}`, {
+        method: 'PUT',
+        headers: { 'Authorization': `token ${GH_TOKEN}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+    } catch(e) {
+      throw new Error('Mất mạng / GitHub không phản hồi: ' + (e.message || 'unknown'));
+    }
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Upload thất bại');
-    if (!data.content || !data.content.download_url) {
-      throw new Error('GitHub không trả về URL hợp lệ');
+    // Parse response cẩn thận: GitHub có thể trả HTML khi rate limit / lỗi server
+    let data = null;
+    let rawText = '';
+    try {
+      rawText = await res.text();
+      data = rawText ? JSON.parse(rawText) : null;
+    } catch(e) {
+      console.error('GitHub trả response không phải JSON:', rawText.slice(0, 500));
+      throw new Error('GitHub trả về dữ liệu lạ (HTTP ' + res.status + '). Xem Console.');
+    }
+
+    if (!res.ok) {
+      console.error('GitHub error response:', data);
+      const msg = (data && data.message) ? data.message : ('HTTP ' + res.status);
+      const errors = data && data.errors ? ' — ' + JSON.stringify(data.errors) : '';
+      throw new Error('GitHub: ' + msg + errors);
+    }
+    if (!data || !data.content || !data.content.download_url) {
+      console.error('GitHub thiếu download_url, response:', data);
+      throw new Error('GitHub không trả URL ảnh hợp lệ');
     }
     return data.content.download_url;
   }
@@ -913,8 +949,13 @@
       await loadChapters();
       window.closeEditor();
     } catch(e) {
-      console.error('Lỗi:', e);
-      showStatus('Lỗi: ' + e.message, 'error');
+      console.error('Lỗi saveChapter:', e);
+      const msg = (e && e.message) ? e.message : (typeof e === 'string' ? e : 'lỗi không xác định (xem Console)');
+      showStatus('Lỗi: ' + msg, 'error');
+      // Reset progress bar khi fail
+      document.getElementById('progressBar').style.display = 'none';
+      document.getElementById('progressInfo').style.display = 'none';
+      document.getElementById('progressFill').style.width = '0%';
     }
 
     saveBtn.disabled = false;
@@ -1124,8 +1165,9 @@
 
   function showStatus(msg, type) {
     const t = document.getElementById('statusToast');
-    t.textContent = msg;
-    t.className = 'status ' + type;
+    const safeMsg = (msg == null || msg === '') ? '(không có thông báo)' : String(msg);
+    t.textContent = safeMsg;
+    t.className = 'status ' + (type || 'success');
     t.style.display = 'block';
     setTimeout(() => { t.style.display = 'none'; }, 3000);
   }
