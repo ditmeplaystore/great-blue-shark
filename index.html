@@ -43,22 +43,34 @@
 
   .hero-banner .mascot {
     position: absolute;
-    height: 90px;
-    width: auto;
     bottom: 18px;
     left: 0;
     z-index: 2;
     pointer-events: none;
     will-change: transform;
     animation: mascotSwim 18s linear infinite;
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+  }
+
+  .hero-banner .mascot img {
+    display: block;
+    height: 90px;
+    width: auto;
+    will-change: transform;
+    animation: mascotBob 2.5s ease-in-out infinite;
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
   }
 
   @keyframes mascotSwim {
-    0%   { transform: translateX(calc(1080px + 200px)) translateY(0); }
-    25%  { transform: translateX(calc(810px + 150px)) translateY(-8px); }
-    50%  { transform: translateX(calc(540px + 100px)) translateY(0); }
-    75%  { transform: translateX(calc(270px + 50px)) translateY(-8px); }
-    100% { transform: translateX(-200px) translateY(0); }
+    from { transform: translate3d(100vw, 0, 0); }
+    to   { transform: translate3d(-200px, 0, 0); }
+  }
+
+  @keyframes mascotBob {
+    0%, 100% { transform: translate3d(0, 0, 0); }
+    50%      { transform: translate3d(0, -8px, 0); }
   }
 
   .hero-banner::after {
@@ -465,7 +477,7 @@
 
   <div class="hero-banner">
     <img src="2d2d4163153d10c444cea8b4ddb6ae99.jpg" alt="Fast-track Fortune Formula">
-    <img src="shark.png" alt="" class="mascot">
+    <div class="mascot"><img src="shark.png" alt=""></div>
   </div>
 
   <div class="series-info">
