@@ -965,12 +965,11 @@
 
   function buildCommentEl(d, isReply) {
     const time = d.timestamp ? formatRelativeTime(d.timestamp.seconds) : '';
-    // Escape cho onclick inline: backslash trước, rồi single quote
-    const safeId = d.id.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-    const safeName = d.name.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
     const safeText = escapeHtml(d.text);
     const displayName = escapeHtml(d.name);
-    const rootId = isReply && d.parentId ? d.parentId.replace(/\\/g, '\\\\').replace(/'/g, "\\'") : safeId;
+    // rootId: nếu đây là reply, rootId = parentId của nó (cho replyTo gắn vào root)
+    // Còn nếu đây là root, rootId = chính id của nó.
+    const rootId = isReply && d.parentId ? d.parentId : d.id;
 
     // Identity của comment này (suffix + hue để hiện sau tên)
     const identity = window.getCommentIdentity(d);
@@ -1005,19 +1004,35 @@
       ? 'padding:10px 12px;background:#0a1225;border-radius:4px;margin-bottom:4px;margin-left:24px;border-left:2px solid #0d1a35;'
       : 'padding:12px;background:#081420;border-radius:4px;margin-bottom:4px;';
 
-    // Đánh dấu reply tới character → shadow reply (logic giữ, UI ẩn)
-    const replyArg = isChar ? 'true' : 'false';
-    // Truyền suffix + hue của comment này vào replyTo để hiển thị trong indicator
-    const safeSuffix = identity ? identity.suffix.replace(/'/g, "\\'") : '';
-    const safeHue = identity ? String(identity.hue) : '';
-
+    // Phần header + text: dùng innerHTML vì đã escape tất cả các biến (displayName, safeText, suffixHtml, replyTag).
+    // suffixHtml và replyTag tự build từ escapeHtml() nên cũng OK.
     div.innerHTML = ''
       + '<div style="display:flex;justify-content:space-between;margin-bottom:4px;">'
       +   '<span style="font-size:12px;font-weight:600;color:#00a8ff;">' + displayName + suffixHtml + replyTag + '</span>'
       +   '<span style="font-size:11px;color:#2a4a6a;">' + time + '</span>'
       + '</div>'
-      + '<p style="font-size:13px;color:#a0c0d8;line-height:1.5;margin:0;white-space:pre-wrap;">' + safeText + '</p>'
-      + '<div style="margin-top:5px;"><span onclick="replyTo(\'' + rootId + '\', \'' + safeName + '\', ' + replyArg + ', \'' + safeSuffix + '\', \'' + safeHue + '\')" style="font-size:11px;color:#4a6a8a;cursor:pointer;">↩ Trả lời</span></div>';
+      + '<p style="font-size:13px;color:#a0c0d8;line-height:1.5;margin:0;white-space:pre-wrap;">' + safeText + '</p>';
+
+    // Phần nút "Trả lời": build bằng createElement + addEventListener để KHÔNG NHÚNG name/id vào HTML attribute.
+    // Đây là fix cho XSS: trước đây dùng onclick="replyTo('...name...')" → name chứa dấu " sẽ thoát attribute.
+    const replyWrap = document.createElement('div');
+    replyWrap.style.marginTop = '5px';
+    const replyBtn = document.createElement('span');
+    replyBtn.style.cssText = 'font-size:11px;color:#4a6a8a;cursor:pointer;';
+    replyBtn.textContent = '↩ Trả lời';
+    // Lưu data vào closure (KHÔNG qua HTML attribute)
+    const replyData = {
+      rootId: rootId,
+      name: d.name,
+      isCharacterTarget: isChar,
+      suffix: identity ? identity.suffix : null,
+      hue: identity ? identity.hue : null
+    };
+    replyBtn.addEventListener('click', function() {
+      window.replyTo(replyData.rootId, replyData.name, replyData.isCharacterTarget, replyData.suffix, replyData.hue);
+    });
+    replyWrap.appendChild(replyBtn);
+    div.appendChild(replyWrap);
 
     return div;
   }
@@ -1142,10 +1157,22 @@
       if (window.loadAllLikes) window.loadAllLikes();
 
       // Auto-open from shared link
+      // Format mới: ?ch=<firestoreId> (stable, không shift khi xóa chap)
+      // Format cũ: ?ch=<số 1,2,3> (backward-compat, có thể trỏ sai chap nếu đã xóa)
       const urlParams = new URLSearchParams(window.location.search);
-      const sharedCh = parseInt(urlParams.get('ch'));
-      if (sharedCh && sharedCh >= 1 && sharedCh <= chapters.length) {
-        openReader(sharedCh);
+      const sharedParam = urlParams.get('ch');
+      if (sharedParam) {
+        // Thử match firestoreId trước
+        const matchByFid = chapters.find(c => c.firestoreId === sharedParam);
+        if (matchByFid) {
+          openReader(matchByFid.id);
+        } else {
+          // Fallback: parse số (link cũ)
+          const sharedCh = parseInt(sharedParam);
+          if (sharedCh && sharedCh >= 1 && sharedCh <= chapters.length) {
+            openReader(sharedCh);
+          }
+        }
       }
     } catch(e) {
       console.error('Lỗi tải chapters:', e);
@@ -1416,7 +1443,12 @@
   }
 
   function shareChapter() {
-    const url = window.location.origin + window.location.pathname + '?ch=' + currentChapter;
+    // Dùng firestoreId (stable) thay vì id số 1,2,3 (sẽ shift khi xóa/đảo chapter).
+    // Backward-compat: vẫn nhận ?ch=số ở loadChaptersFromFirestore (link cũ vẫn mở được,
+    // chỉ có thể trỏ tới chap khác nếu đã xóa chap giữa — không có cách nào cứu link cũ).
+    const ch = chapters.find(c => c.id === currentChapter);
+    const param = ch && ch.firestoreId ? ch.firestoreId : currentChapter;
+    const url = window.location.origin + window.location.pathname + '?ch=' + encodeURIComponent(param);
     navigator.clipboard.writeText(url).then(() => {
       const msg = document.getElementById('shareMsg');
       msg.style.display = 'inline';
