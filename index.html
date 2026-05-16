@@ -48,9 +48,9 @@
     z-index: 2;
     pointer-events: none;
     will-change: transform;
-    animation: mascotSwim 18s linear infinite;
-    transform: translate3d(0, 0, 0);
+    transform: translate3d(-200px, 0, 0);
     backface-visibility: hidden;
+    transition: none;
   }
 
   .hero-banner .mascot img {
@@ -61,11 +61,6 @@
     animation: mascotBob 2.5s ease-in-out infinite;
     transform: translate3d(0, 0, 0);
     backface-visibility: hidden;
-  }
-
-  @keyframes mascotSwim {
-    from { transform: translate3d(100vw, 0, 0); }
-    to   { transform: translate3d(-200px, 0, 0); }
   }
 
   @keyframes mascotBob {
@@ -1491,6 +1486,79 @@
   tryLoadFirebase();
 
   // Auto-open handled in loadChaptersFromFirestore
+
+  // ── MASCOT SWIM (random direction/height/speed mỗi vòng) ──
+  // Mỗi lần cá mập đi hết banner thì random lại:
+  //  - direction: 'ltr' (trái → phải) hoặc 'rtl' (phải → trái)
+  //  - bottom: random trong khoảng banner để bơi cao/thấp khác nhau
+  //  - duration: 12-22s (tốc độ)
+  //  - rest: nghỉ 1-3s trước khi spawn lại
+  // Dùng requestAnimationFrame thay vì CSS @keyframes vì cần đổi đường đi mỗi vòng.
+  (function() {
+    const mascot = document.querySelector('.hero-banner .mascot');
+    const banner = document.querySelector('.hero-banner');
+    if (!mascot || !banner) return;
+    const mascotImg = mascot.querySelector('img');
+
+    // Lấy width banner để tính quãng đường
+    function getBannerWidth() {
+      return banner.clientWidth || window.innerWidth;
+    }
+
+    // Lấy width cá mập (đợi ảnh load xong mới có offsetWidth chính xác)
+    function getMascotWidth() {
+      return mascot.offsetWidth || 180;
+    }
+
+    function rand(min, max) {
+      return min + Math.random() * (max - min);
+    }
+
+    function swimOnce() {
+      const bw = getBannerWidth();
+      const mw = getMascotWidth();
+      const direction = Math.random() < 0.5 ? 'ltr' : 'rtl';
+      const duration = rand(12000, 22000); // ms
+      // bottom: banner cao 150px, cá mập cao ~90px → cho bơi từ bottom 4 đến bottom 50
+      const bottomPx = rand(4, 50);
+      mascot.style.bottom = bottomPx + 'px';
+
+      // Flip ảnh theo hướng: ltr (đi sang phải) thì lật ngang
+      if (mascotImg) {
+        mascotImg.style.transform = direction === 'ltr'
+          ? 'translate3d(0,0,0) scaleX(-1)'
+          : 'translate3d(0,0,0)';
+      }
+
+      // Vị trí start/end (translateX)
+      const startX = direction === 'ltr' ? -mw - 20 : bw + 20;
+      const endX   = direction === 'ltr' ? bw + 20  : -mw - 20;
+
+      const t0 = performance.now();
+      function frame(now) {
+        const t = Math.min(1, (now - t0) / duration);
+        const x = startX + (endX - startX) * t;
+        mascot.style.transform = 'translate3d(' + x + 'px, 0, 0)';
+        if (t < 1) {
+          requestAnimationFrame(frame);
+        } else {
+          // Nghỉ rồi spawn vòng mới
+          const rest = rand(800, 3000);
+          setTimeout(swimOnce, rest);
+        }
+      }
+      requestAnimationFrame(frame);
+    }
+
+    // Đợi 1 nhịp cho ảnh load rồi bắt đầu
+    if (mascotImg && !mascotImg.complete) {
+      mascotImg.addEventListener('load', () => setTimeout(swimOnce, 300), { once: true });
+      // Fallback nếu ảnh fail
+      setTimeout(swimOnce, 1500);
+    } else {
+      setTimeout(swimOnce, 300);
+    }
+  })();
 </script>
 </body>
 </html>
