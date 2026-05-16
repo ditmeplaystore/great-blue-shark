@@ -727,14 +727,46 @@
   const dropzone = document.getElementById('dropzone');
   const thumbInput = document.getElementById('thumbInput');
 
-  thumbInput.addEventListener('change', (e) => {
+  // Helper: đọc file thành base64 NGAY khi user chọn.
+  // Lý do: nếu để dành đến lúc nhấn Lưu mới đọc, browser có thể đã thu hồi
+  // permission đọc file (xảy ra trên iOS Safari, file cloud chưa download,
+  // file bị xóa/move sau khi chọn, hoặc form mở quá lâu).
+  // Đọc ngay → giữ base64 trong memory → upload chắc chắn thành công.
+  function readFileAsBase64(file) {
+    return new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => {
+        const result = r.result;
+        if (typeof result !== 'string' || result.indexOf(',') === -1) {
+          rej(new Error('Không đọc được ảnh ' + (file.name || '')));
+          return;
+        }
+        res(result.split(',')[1]);
+      };
+      r.onerror = () => rej(new Error('Không đọc được "' + (file.name || '?') + '" (' + (r.error && r.error.message || 'permission') + ')'));
+      r.readAsDataURL(file);
+    });
+  }
+
+  thumbInput.addEventListener('change', async (e) => {
     const file = e.target.files[0];
-    if (!file || !file.type.startsWith('image/')) return;
-    pendingThumb = { file, preview: URL.createObjectURL(file), url: null };
-    document.getElementById('thumbPreviewImg').src = pendingThumb.preview;
-    document.getElementById('thumbPreviewImg').style.display = 'block';
-    document.getElementById('thumbPlaceholder').style.display = 'none';
     thumbInput.value = '';
+    if (!file || !file.type.startsWith('image/')) return;
+    try {
+      const base64 = await readFileAsBase64(file);
+      pendingThumb = {
+        file,
+        base64,
+        ext: (file.name.split('.').pop() || 'png').toLowerCase(),
+        preview: URL.createObjectURL(file),
+        url: null
+      };
+      document.getElementById('thumbPreviewImg').src = pendingThumb.preview;
+      document.getElementById('thumbPreviewImg').style.display = 'block';
+      document.getElementById('thumbPlaceholder').style.display = 'none';
+    } catch(err) {
+      showStatus('Lỗi thumbnail: ' + (err.message || err), 'error');
+    }
   });
 
   fileInput.addEventListener('change', (e) => { handleFiles(e.target.files); fileInput.value = ''; });
@@ -742,47 +774,58 @@
   dropzone.addEventListener('dragleave', () => { dropzone.classList.remove('dragover'); });
   dropzone.addEventListener('drop', (e) => { e.preventDefault(); dropzone.classList.remove('dragover'); handleFiles(e.dataTransfer.files); });
 
-  function handleFiles(files) {
-    for (const file of files) {
-      if (!file.type.startsWith('image/')) continue;
-      pendingImages.push({ file, preview: URL.createObjectURL(file), url: null });
+  async function handleFiles(files) {
+    const arr = Array.from(files).filter(f => f.type.startsWith('image/'));
+    if (arr.length === 0) return;
+
+    if (arr.length > 1) showStatus('Đang đọc ' + arr.length + ' ảnh...', 'success');
+
+    let failed = [];
+    for (const file of arr) {
+      try {
+        const base64 = await readFileAsBase64(file);
+        pendingImages.push({
+          file,
+          base64,
+          ext: (file.name.split('.').pop() || 'png').toLowerCase(),
+          name: file.name,
+          preview: URL.createObjectURL(file),
+          url: null
+        });
+        renderImageList(); // update dần để user thấy tiến độ
+      } catch(e) {
+        console.error('Đọc file fail:', file.name, e);
+        failed.push(file.name);
+      }
     }
-    renderImageList();
+
+    if (failed.length > 0) {
+      showStatus('Không đọc được ' + failed.length + ' ảnh: ' + failed.join(', '), 'error');
+    }
   }
 
   function renderImageList() {
-    document.getElementById('imageList').innerHTML = pendingImages.map((img, i) => `
+    document.getElementById('imageList').innerHTML = pendingImages.map((img, i) => {
+      const displayName = img.name || (img.file ? img.file.name : 'Ảnh đã upload');
+      return `
       <div class="image-item">
         <div class="img-order">${i + 1}</div>
         <img class="img-preview" src="${escapeHtml(img.preview)}">
-        <div class="img-name">${escapeHtml(img.file ? img.file.name : 'Ảnh đã upload')}</div>
+        <div class="img-name">${escapeHtml(displayName)}</div>
         <button class="img-remove" onclick="removeImage(${i})">✕</button>
       </div>
-    `).join('');
+    `;
+    }).join('');
   }
 
   window.removeImage = function(i) { pendingImages.splice(i, 1); renderImageList(); };
 
   // ── GITHUB UPLOAD ──
-  async function uploadToGitHub(file, path) {
-    if (!file) throw new Error('uploadToGitHub: file rỗng');
+  // Nhận base64 đã đọc sẵn (lúc user chọn file). Không gọi FileReader ở đây
+  // để tránh lỗi permission khi file đã bị thu hồi quyền sau khi chọn.
+  async function uploadToGitHub(base64, path) {
+    if (!base64) throw new Error('uploadToGitHub: base64 rỗng');
     if (!GH_TOKEN) throw new Error('Không có GitHub token (đăng nhập lại)');
-
-    const base64 = await new Promise((res, rej) => {
-      const r = new FileReader();
-      r.onload = () => {
-        const result = r.result;
-        if (typeof result !== 'string' || result.indexOf(',') === -1) {
-          rej(new Error('FileReader không đọc được ảnh (file lỗi?)'));
-          return;
-        }
-        res(result.split(',')[1]);
-      };
-      r.onerror = () => rej(new Error('FileReader lỗi: ' + (r.error && r.error.message || 'unknown')));
-      r.readAsDataURL(file);
-    });
-
-    if (!base64) throw new Error('Base64 rỗng sau khi đọc ' + (file.name || 'file'));
 
     let sha = null;
     try {
@@ -848,7 +891,8 @@
     const progressInfo = document.getElementById('progressInfo');
 
     try {
-      const toUpload = pendingImages.filter(img => img.file);
+      // Ảnh mới (cần upload) = ảnh có base64. Ảnh cũ chỉ có url, không có base64.
+      const toUpload = pendingImages.filter(img => img.base64);
       const chapterId = editingId || ('ch_' + Date.now());
       const folderName = title.replace(/[^a-zA-Z0-9]/g, '_');
 
@@ -860,14 +904,16 @@
       let uploaded = 0;
       for (let idx = 0; idx < pendingImages.length; idx++) {
         const img = pendingImages[idx];
-        if (img.file) {
-          const ext = (img.file.name.split('.').pop() || 'png').toLowerCase();
+        if (img.base64) {
+          const ext = img.ext || 'png';
           const rand = Math.random().toString(36).substr(2, 8);
           const fileName = `page_${String(idx + 1).padStart(3,'0')}_${rand}.${ext}`;
           const path = `chapters/${folderName}/${fileName}`;
 
           progressInfo.textContent = `Đang upload ${uploaded + 1}/${toUpload.length}...`;
-          img.url = await uploadToGitHub(img.file, path);
+          img.url = await uploadToGitHub(img.base64, path);
+          // Giải phóng base64 sau khi upload xong để đỡ tốn RAM
+          img.base64 = null;
           uploaded++;
           progressFill.style.width = ((uploaded / toUpload.length) * 100) + '%';
         }
@@ -875,12 +921,13 @@
 
       // Upload thumbnail
       let thumbUrl = pendingThumb && pendingThumb.url ? pendingThumb.url : null;
-      if (pendingThumb && pendingThumb.file) {
-        const ext = (pendingThumb.file.name.split('.').pop() || 'png').toLowerCase();
+      if (pendingThumb && pendingThumb.base64) {
+        const ext = pendingThumb.ext || 'png';
         const rand = Math.random().toString(36).substr(2, 8);
         const thumbPath = `chapters/${folderName}/thumb_${rand}.${ext}`;
         progressInfo.textContent = 'Đang upload thumbnail...';
-        thumbUrl = await uploadToGitHub(pendingThumb.file, thumbPath);
+        thumbUrl = await uploadToGitHub(pendingThumb.base64, thumbPath);
+        pendingThumb.base64 = null;
       }
 
       const chapterData = {
