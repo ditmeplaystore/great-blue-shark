@@ -46,20 +46,19 @@
     height: 90px;
     width: auto;
     bottom: 18px;
-    left: 100%;
+    left: 0;
     z-index: 2;
     pointer-events: none;
-    animation: mascotSwim 18s linear infinite, mascotBob 2.5s ease-in-out infinite;
+    will-change: transform;
+    animation: mascotSwim 18s linear infinite;
   }
 
   @keyframes mascotSwim {
-    0%   { left: 100%; }
-    100% { left: -200px; }
-  }
-
-  @keyframes mascotBob {
-    0%, 100% { transform: translateY(0); }
-    50%      { transform: translateY(-8px); }
+    0%   { transform: translateX(calc(1080px + 200px)) translateY(0); }
+    25%  { transform: translateX(calc(810px + 150px)) translateY(-8px); }
+    50%  { transform: translateX(calc(540px + 100px)) translateY(0); }
+    75%  { transform: translateX(calc(270px + 50px)) translateY(-8px); }
+    100% { transform: translateX(-200px) translateY(0); }
   }
 
   .hero-banner::after {
@@ -74,11 +73,6 @@
     pointer-events: none;
   }
 
-  @keyframes sharkFall {
-    0% { top: -60px; opacity: 1; }
-    90% { opacity: 1; }
-    100% { top: 110vh; opacity: 0; }
-  }
 
   .series-info {
     padding: 12px 20px 16px;
@@ -469,56 +463,10 @@
 <!-- ══════ MAIN VIEW ══════ -->
 <div class="main-view" id="mainView">
 
-  <div class="hero-banner" id="heroBanner">
+  <div class="hero-banner">
     <img src="2d2d4163153d10c444cea8b4ddb6ae99.jpg" alt="Fast-track Fortune Formula">
     <img src="shark.png" alt="" class="mascot">
   </div>
-
-  <script>
-    (function() {
-      const banner = document.getElementById('heroBanner');
-
-      // 🦈 EASTER EGG
-      let clickCount = 0;
-      let lastTap = 0;
-      let isTouchDevice = false;
-      
-      banner.addEventListener('touchstart', function() {
-        isTouchDevice = true;
-        handleTap();
-      }, {passive: true});
-      
-      banner.addEventListener('click', function() {
-        if (isTouchDevice) return;
-        handleTap();
-      });
-
-      function handleTap() {
-        const now = Date.now();
-        if (now - lastTap > 3000) clickCount = 0;
-        lastTap = now;
-        clickCount++;
-        if (clickCount >= 10) {
-          clickCount = 0;
-          sharkRain();
-        }
-      }
-
-      function sharkRain() {
-        for (let i = 0; i < 30; i++) {
-          setTimeout(() => {
-            const shark = document.createElement('img');
-            shark.src = 'favicon.png';
-            shark.style.cssText = 'position:fixed;z-index:9999;pointer-events:none;width:' + (Math.random() * 40 + 20) + 'px;left:' + (Math.random() * 100) + 'vw;top:-60px;';
-            shark.style.animation = 'sharkFall ' + (Math.random() * 2 + 1.5) + 's linear forwards';
-            shark.style.transform = 'rotate(' + (Math.random() * 360) + 'deg)';
-            document.body.appendChild(shark);
-            setTimeout(() => shark.remove(), 4000);
-          }, i * 100);
-        }
-      }
-    })();
-  </script>
 
   <div class="series-info">
     <div class="hero-title">
