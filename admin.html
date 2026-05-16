@@ -842,6 +842,17 @@
 
       await setDoc(doc(db, 'chapters', chapterId), chapterData);
 
+      // ── SEED LIKES: chap mới luôn có 2 like (Linh cẩu đốm + Sư tử) ──
+      // Chỉ chạy khi tạo mới (!editingId), edit chap cũ không đụng vào count.
+      // Dùng setDoc đè thẳng count=2 vì lúc tạo mới chưa ai like, không sợ ghi đè.
+      if (!editingId) {
+        try {
+          await setDoc(doc(db, 'likes', chapterId), { count: 2 });
+        } catch(e) {
+          console.warn('Seed likes lỗi (không nghiêm trọng):', e);
+        }
+      }
+
       // ── CLEANUP: xóa file orphan trong các folder của chapter này ──
       // Sau khi save, quét folder hiện tại + các folder cũ (nếu đổi title đổi folder name),
       // file nào không có URL trong chapterData.images/thumbnail thì xóa.
