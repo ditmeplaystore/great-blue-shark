@@ -33,12 +33,33 @@
     overflow: hidden;
   }
 
-  .hero-banner img {
+  .hero-banner > img {
     width: 100%;
     height: 100%;
     object-fit: cover;
     object-position: center top;
     display: block;
+  }
+
+  .hero-banner .mascot {
+    position: absolute;
+    height: 90px;
+    width: auto;
+    bottom: 18px;
+    left: 100%;
+    z-index: 2;
+    pointer-events: none;
+    animation: mascotSwim 18s linear infinite, mascotBob 2.5s ease-in-out infinite;
+  }
+
+  @keyframes mascotSwim {
+    0%   { left: 100%; }
+    100% { left: -200px; }
+  }
+
+  @keyframes mascotBob {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-8px); }
   }
 
   .hero-banner::after {
@@ -449,6 +470,7 @@
 
   <div class="hero-banner" id="heroBanner">
     <img src="2d2d4163153d10c444cea8b4ddb6ae99.jpg" alt="Fast-track Fortune Formula">
+    <img src="shark.png" alt="" class="mascot">
   </div>
 
   <script>
