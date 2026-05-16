@@ -795,7 +795,8 @@
       const docId = ch.firestoreId || ('chapter_' + ch.id);
       const ref = doc(db, 'likes', docId);
       window.likeUnsubs[ch.id] = onSnapshot(ref, (snap) => {
-        const count = snap.exists() ? Math.max(0, snap.data().count) : 0;
+        // Doc chưa tồn tại (chap cũ chưa được seed) → fallback hiện 2
+        const count = snap.exists() ? Math.max(0, snap.data().count) : 2;
         const el = document.getElementById('likes-ch-' + ch.id);
         if (el) el.textContent = '♡ ' + count;
       });
@@ -823,7 +824,8 @@
     try {
       await runTransaction(db, async (transaction) => {
         const snap = await transaction.get(ref);
-        const current = snap.exists() ? snap.data().count : 0;
+        // Doc chưa tồn tại → coi như đã có 2 (chap cũ chưa seed)
+        const current = snap.exists() ? snap.data().count : 2;
         const newCount = willLike ? current + 1 : Math.max(0, current - 1);
         transaction.set(ref, { count: newCount });
       });
@@ -850,11 +852,15 @@
     if (btn) btn.style.color = liked ? '#00a8ff' : '#5a7fa0';
   }
 
+  window.readerLikeUnsub = null;
   window.loadLikes = function(chapterId) {
+    // Cleanup listener cũ (mở chap khác → tránh nhiều listener cộng dồn)
+    if (window.readerLikeUnsub) { try { window.readerLikeUnsub(); } catch(e) {} }
     const docId = getLikesDocId(chapterId);
     const ref = doc(db, 'likes', docId);
-    onSnapshot(ref, (snap) => {
-      const count = snap.exists() ? snap.data().count : 0;
+    window.readerLikeUnsub = onSnapshot(ref, (snap) => {
+      // Doc chưa tồn tại → fallback hiện 2 (chap cũ chưa seed)
+      const count = snap.exists() ? snap.data().count : 2;
       const el = document.getElementById('likeCount');
       if (el) el.textContent = Math.max(0, count);
     });
@@ -944,13 +950,16 @@
     }
   }
 
+  window.commentsUnsub = null;
   window.loadComments = function(chapterId) {
+    // Cleanup listener cũ
+    if (window.commentsUnsub) { try { window.commentsUnsub(); } catch(e) {} }
     window.currentChapterForComments = chapterId;
     const q = query(
       collection(db, 'comments'),
       where('chapter', '==', chapterId)
     );
-    onSnapshot(q, (snapshot) => {
+    window.commentsUnsub = onSnapshot(q, (snapshot) => {
       const list = document.getElementById('commentsList');
       if (!list) return;
       list.innerHTML = '';

@@ -301,7 +301,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
-  import { getFirestore, collection, doc, getDocs, setDoc, deleteDoc, addDoc, query, orderBy, where, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
+  import { getFirestore, collection, doc, getDoc, getDocs, setDoc, deleteDoc, addDoc, query, orderBy, where, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
   import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-auth.js";
 
   const firebaseConfig = {
@@ -421,8 +421,26 @@
       chapters = [];
       snapshot.forEach((d) => { chapters.push({ id: d.id, ...d.data() }); });
       renderChapterList();
+      // Backfill 2 likes cho chap cũ chưa có doc likes (chạy ngầm)
+      backfillLikes();
     } catch(e) {
       document.getElementById('chapterListAdmin').innerHTML = '<div class="empty-state"><p>Lỗi tải dữ liệu.</p></div>';
+    }
+  }
+
+  // Quét tất cả chap, chap nào chưa có doc likes thì seed count=2
+  async function backfillLikes() {
+    for (const ch of chapters) {
+      try {
+        const ref = doc(db, 'likes', ch.id);
+        const snap = await getDoc(ref);
+        if (!snap.exists()) {
+          await setDoc(ref, { count: 2 });
+          console.log('Backfilled 2 likes cho:', ch.title);
+        }
+      } catch(e) {
+        console.warn('Backfill lỗi cho', ch.id, ':', e);
+      }
     }
   }
 
